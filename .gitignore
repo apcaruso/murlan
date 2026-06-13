@@ -3,6 +3,8 @@
 !.dev.vars.example
 .dev.vars
 .wrangler/
+build/
 dist/
 node_modules/
+.svelte-kit/
 .DS_Store

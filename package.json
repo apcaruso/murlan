@@ -3,13 +3,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "check": "tsc --noEmit"
+    "dev": "npm run build && wrangler dev",
+    "dev:frontend": "vite dev",
+    "dev:worker": "wrangler dev",
+    "build": "vite build",
+    "deploy": "npm run build && wrangler deploy",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit -p tsconfig.worker.json",
+    "check:worker": "tsc --noEmit -p tsconfig.worker.json"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.65.0",
+    "svelte": "^5.56.3",
+    "svelte-check": "^4.6.0",
     "typescript": "^5.9.3",
+    "vite": "^8.0.16",
     "wrangler": "^4.0.0"
   }
 }

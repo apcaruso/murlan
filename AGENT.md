@@ -1,5 +1,15 @@
 # Roadmap Murlan Multiplayer su Cloudflare Workers + Durable Objects
 
+## Istruzioni agente
+
+Ogni volta che viene completato uno step della roadmap, aggiornare questo file con:
+
+* stato dello step
+* comandi eseguiti
+* test passati e falliti
+* bug trovati o corretti
+* prossimo step consigliato
+
 ## Obiettivo
 
 Sviluppare un gioco web multiplayer di Murlan a stanze.
@@ -149,15 +159,23 @@ Implementato:
 * WebSocket server push
 * client API wrappers
 * sessione anonima locale per stanza
+* test manuali API stanza
+* test manuali partita via API
+* route home/stanza collegate ai wrapper Cloudflare a livello sorgente
+* bootstrap UI stanza con sessione locale, state fetch e WebSocket
+* toolchain frontend SvelteKit/Vite
+* build statica frontend
+* serving frontend da Wrangler assets con Worker first su `/api/*`
+* Lobby UI reale con componenti `Lobby`, `InviteLink`, `PlayerList`, `ConnectionStatus`
+* Game UI reale con componenti `Card`, `Hand`, `Table`, `PlayerPanel`, `Scoreboard`, `ActionBar`, `GameLog`
+* azioni frontend `playCards` e `passTurn` con selezione multipla carte
 
 Ancora da completare:
 
-* UI reale
-* collegamento route home/stanza ai wrapper Cloudflare
 * gestione errori UX
 * reconnect UX completo
 * test automatici del Worker
-* test multiplayer manuali
+* test multiplayer manuali UI/browser
 * deploy Cloudflare
 
 ---
@@ -501,6 +519,37 @@ Casi:
 * punteggi aggiornati
 * partita termina con vincitore
 
+Stato: completato il 2026-06-12.
+
+Comandi eseguiti:
+
+* `npm run check`
+* `npm run dev -- --port 8787`
+* suite Node manuale HTTP per i casi dello step 3
+* `kill 63991`
+
+Test passati:
+
+* start game solo host
+* start rifiutato sotto 2 player
+* start rifiutato se player non ready
+* carte distribuite server-side
+* ogni player vede solo la propria mano
+* prima mossa deve contenere 3 di picche
+* giocata fuori turno rifiutata
+* carte non possedute rifiutate
+* combinazione invalida rifiutata
+* passaggio turno valido
+* tutti passano e il controllo torna all'ultimo player valido
+* player chiude, mano termina, punteggi aggiornati
+* partita termina con vincitore (`game_finished`, 6 mani, target 21, high score 24)
+
+Test falliti: nessuno.
+
+Bug trovati: nessuno.
+
+Prossimo step consigliato: Step 4 - Collegare frontend.
+
 ---
 
 ## Step 4 - Collegare frontend
@@ -530,6 +579,51 @@ Room page:
 * apre WebSocket
 * aggiorna UI con snapshot ricevuti
 
+Stato: completato il 2026-06-13.
+
+Comandi eseguiti:
+
+* `npm install -D svelte @sveltejs/kit @sveltejs/adapter-static vite svelte-check`
+* `npm run check`
+* `npm run build`
+* `npm run dev -- --port 8787`
+* check HTTP su `/`
+* check HTTP su `/room/TESTROOM`
+* check HTTP su `GET /api/health`
+* check HTTP su `POST /api/rooms`
+* check HTTP su `POST /api/rooms/:roomId/join`
+* `npm audit --omit=dev`
+* `kill 65775`
+
+Test passati:
+
+* `npm run check` passa con `svelte-check` e `tsc` Worker
+* `npm run build` genera `build/` con `@sveltejs/adapter-static`
+* `/` su `wrangler dev` risponde `200 text/html`
+* `/room/TESTROOM` su `wrangler dev` risponde `200 text/html`
+* `GET /api/health` risponde `200 {"ok":true}` con assets attivi
+* `POST /api/rooms` crea una stanza con assets attivi
+* `POST /api/rooms/:roomId/join` porta la lobby a 2 player con assets attivi
+* home route sorgente crea stanza via `createRoom` e redirige a `/room/:roomId`
+* room route sorgente legge `roomId` da URL e `invite` dalla query
+* room route sorgente usa sessione locale per `getRoomState`
+* room route sorgente mostra form join se manca sessione locale
+* room route sorgente apre WebSocket con `subscribeToRoom`
+* room route sorgente aggiorna lo snapshot dai messaggi realtime
+* `npm audit --omit=dev` riporta 0 vulnerabilita production
+
+Test falliti o non verificabili:
+
+* nessuno per lo scope dello step
+
+Bug trovati:
+
+* risolto: mancava la toolchain frontend SvelteKit/static assets
+* risolto: il Worker serviva solo API e non serviva ancora il frontend
+* nota: `npm install` segnala vulnerabilita su dipendenze dev; `npm audit --omit=dev` non trova vulnerabilita production
+
+Prossimo step consigliato: Step 5 - Lobby UI.
+
 ---
 
 ## Step 5 - Lobby UI
@@ -552,6 +646,45 @@ Acceptance criteria:
 * host badge
 * Start Game solo host
 * Start Game abilitato solo in fase `ready`
+
+Stato: completato il 2026-06-13.
+
+Comandi eseguiti:
+
+* `npm run check`
+* `npm run build`
+* `npm run dev -- --port 8787`
+* check HTTP su `/`
+* check HTTP su `/room/STEP5ROOM`
+* check HTTP su `GET /api/health`
+* check HTTP su `POST /api/rooms`
+* check HTTP su `POST /api/rooms/:roomId/join`
+* check HTTP su `POST /api/rooms/:roomId/ready`
+* check HTTP su `POST /api/rooms/:roomId/start`
+* `lsof -ti tcp:8787`
+* `kill 65840`
+
+Test passati:
+
+* `npm run check` passa con `svelte-check` e `tsc` Worker
+* `npm run build` passa e rigenera `build/`
+* `/` su `wrangler dev` risponde `200 text/html`
+* `/room/STEP5ROOM` su `wrangler dev` risponde `200 text/html`
+* `GET /api/health` risponde `200 {"ok":true}`
+* create/join lobby via API funzionano con assets attivi
+* ready del non-host porta la stanza in fase `ready`
+* start host-only porta la stanza in fase `playing`
+* codice stanza visibile nel componente `Lobby`
+* link invito copiabile nel componente `InviteLink`
+* lista player visibile nel componente `PlayerList`
+* ready state, host badge e stato connessione visibili nella lobby
+* `Start Game` viene renderizzato solo per host ed e abilitato solo in fase `ready`
+
+Test falliti: nessuno.
+
+Bug trovati: nessuno.
+
+Prossimo step consigliato: Step 6 - Game UI.
 
 ---
 
@@ -580,6 +713,54 @@ Acceptance criteria:
 * carte rimanenti per player visibili
 * punteggi visibili
 * log eventi recente
+
+Stato: completato il 2026-06-13.
+
+Comandi eseguiti:
+
+* `npm run check`
+* `npm run build`
+* `npm run dev -- --port 8787`
+* check HTTP su `/`
+* check HTTP su `/room/STEP6ROOM`
+* check HTTP su `GET /api/health`
+* check HTTP su `POST /api/rooms`
+* check HTTP su `POST /api/rooms/:roomId/join`
+* check HTTP su `POST /api/rooms/:roomId/ready`
+* check HTTP su `POST /api/rooms/:roomId/start`
+* check HTTP su `GET /api/rooms/:roomId/state`
+* check HTTP su `POST /api/rooms/:roomId/play`
+* check HTTP su `POST /api/rooms/:roomId/pass`
+* `lsof -ti tcp:8787`
+* `kill 66948`
+* `kill 67014`
+
+Test passati:
+
+* `npm run check` passa con `svelte-check` e `tsc` Worker
+* `npm run build` passa e rigenera `build/`
+* `/` su `wrangler dev` risponde `200 text/html`
+* `/room/STEP6ROOM` su `wrangler dev` risponde `200 text/html`
+* `GET /api/health` risponde `200 {"ok":true}`
+* create/join/ready/start via API funzionano con assets attivi
+* `GET /api/rooms/:roomId/state` restituisce mano privata da 18 carte per il player corrente
+* `POST /api/rooms/:roomId/play` accetta `cardIds: ["spades-3"]` come prima mossa valida
+* `POST /api/rooms/:roomId/pass` registra il player nei `passedPlayerIds`
+* mano ordinata in `Hand.svelte`
+* selezione multipla carte in `Card.svelte`/`Hand.svelte`
+* `ActionBar.svelte` usa i card id selezionati per giocare
+* ultima giocata, turno, controller e passaggi visibili in `Table.svelte`
+* carte rimanenti visibili in `PlayerPanel.svelte`
+* punteggi visibili in `Scoreboard.svelte`
+* eventi recenti visibili in `GameLog.svelte`
+
+Test falliti: nessuno.
+
+Bug trovati:
+
+* corretto durante lo step: helper `playerName` mancante in `Table.svelte`
+
+Prossimo step consigliato: Step 7 - Reconnect UX.
 
 ---
 
