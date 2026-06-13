@@ -44,11 +44,19 @@ export function subscribeToRoom(
 			return;
 		}
 
-		callbacks.onMessage(JSON.parse(event.data) as RoomSocketMessage);
+		try {
+			callbacks.onMessage(JSON.parse(event.data) as RoomSocketMessage);
+		} catch (error) {
+			console.error('Invalid realtime message.', error);
+		}
 	});
 
 	return {
 		socket,
-		unsubscribe: () => socket.close()
+		unsubscribe: () => {
+			if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+				socket.close();
+			}
+		}
 	};
 }

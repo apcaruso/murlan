@@ -1,26 +1,32 @@
 <script lang="ts">
-	type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
+	type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
 	export let state: ConnectionState = 'idle';
+	export let detail = '';
 
 	const labels: Record<ConnectionState, string> = {
 		idle: 'non connesso',
 		connecting: 'connessione...',
 		connected: 'online',
+		reconnecting: 'riconnessione...',
 		disconnected: 'disconnesso',
 		error: 'errore realtime'
 	};
 </script>
 
 <div class="connection" data-state={state} aria-live="polite">
-	<span class="dot"></span>
-	<span>{labels[state]}</span>
+	<div class="label-row">
+		<span class="dot"></span>
+		<span>{labels[state]}</span>
+	</div>
+	{#if detail}
+		<small>{detail}</small>
+	{/if}
 </div>
 
 <style>
 	.connection {
-		display: inline-flex;
-		align-items: center;
+		display: inline-grid;
 		gap: 0.5rem;
 		border: 1px solid rgba(246, 242, 233, 0.16);
 		border-radius: 999px;
@@ -30,6 +36,21 @@
 		font-size: 0.78rem;
 		font-weight: 900;
 		text-transform: uppercase;
+	}
+
+	.label-row {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	small {
+		max-width: 18rem;
+		color: rgba(246, 242, 233, 0.72);
+		font-size: 0.68rem;
+		font-weight: 800;
+		line-height: 1.25;
+		text-transform: none;
 	}
 
 	.dot {
@@ -44,7 +65,8 @@
 		color: #8df0ad;
 	}
 
-	.connection[data-state='connecting'] {
+	.connection[data-state='connecting'],
+	.connection[data-state='reconnecting'] {
 		color: #f1d281;
 	}
 

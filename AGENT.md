@@ -169,11 +169,13 @@ Implementato:
 * Lobby UI reale con componenti `Lobby`, `InviteLink`, `PlayerList`, `ConnectionStatus`
 * Game UI reale con componenti `Card`, `Hand`, `Table`, `PlayerPanel`, `Scoreboard`, `ActionBar`, `GameLog`
 * azioni frontend `playCards` e `passTurn` con selezione multipla carte
+* Reconnect UX con sessione locale persistente, auto-reconnect WebSocket e rejoin su sessione invalida
+* test manuali di hardening concorrenza su API e WebSocket
+* verifica manuale persistenza Durable Object e retention eventi
 
 Ancora da completare:
 
 * gestione errori UX
-* reconnect UX completo
 * test automatici del Worker
 * test multiplayer manuali UI/browser
 * deploy Cloudflare
@@ -774,6 +776,53 @@ Acceptance criteria:
 * stato `connected` cambia in modo comprensibile
 * la stanza non si blocca se un player chiude tab
 
+Stato: completato il 2026-06-13.
+
+Comandi eseguiti:
+
+* `npm run check`
+* `npm run build`
+* `npm run dev -- --port 8787`
+* check HTTP su `/`
+* check HTTP su `/room/STEP7ROOM`
+* check HTTP su `GET /api/health`
+* check HTTP su `POST /api/rooms`
+* check HTTP su `POST /api/rooms/:roomId/join`
+* check HTTP su `GET /api/rooms/:roomId/state` con sessione valida
+* check HTTP su `GET /api/rooms/:roomId/state` con secret invalido
+* check WebSocket su `/api/rooms/:roomId/socket`
+* check WebSocket `ping` -> `pong`
+* check `connected=false` dopo chiusura socket
+* check `connected=true` dopo nuova connessione socket
+* `kill 67482`
+* `kill 67548`
+
+Test passati:
+
+* `npm run check` passa con `svelte-check` e `tsc` Worker
+* `npm run build` passa e rigenera `build/`
+* `/` su `wrangler dev` risponde `200 text/html`
+* `/room/STEP7ROOM` su `wrangler dev` risponde `200 text/html`
+* `GET /api/health` risponde `200 {"ok":true}`
+* refresh pagina mantiene sessione locale tramite `getRoomSession` + `getRoomState`
+* WebSocket invia snapshot iniziale
+* WebSocket risponde `pong`
+* UI passa a `reconnecting` e ritenta con backoff quando il socket si chiude
+* sessione API invalida produce `403 invalid_player_session`
+* la UI cancella la sessione locale invalida e chiede di rientrare con invite token
+* chiusura socket imposta il player `connected=false` senza bloccare la stanza
+* nuova connessione socket riporta il player a `connected=true`
+
+Test falliti: nessuno.
+
+Bug trovati:
+
+* corretto: la sessione locale invalida restava salvata e poteva bloccare il rejoin dello stesso browser
+* corretto: WebSocket chiuso lasciava solo stato `disconnected`, senza tentativo automatico di riconnessione
+* corretto: parsing messaggi realtime non valido poteva propagare eccezioni nel listener
+
+Prossimo step consigliato: Step 8 - Hardening concorrenza.
+
 ---
 
 ## Step 8 - Hardening concorrenza
@@ -788,6 +837,33 @@ Da verificare:
 * start game premuto due volte
 * reconnect durante mano in corso
 
+Stato: completato il 2026-06-13.
+
+Comandi eseguiti:
+
+* `npm run check`
+* `npm run build`
+* `npm run dev -- --port 8787`
+* suite Node manuale con richieste parallele API e WebSocket
+* `kill 67863`
+* `kill 67929`
+
+Test passati:
+
+* `npm run check` passa con `svelte-check` e `tsc` Worker
+* `npm run build` passa e rigenera `build/`
+* doppio `POST /api/rooms/:roomId/start` parallelo: una sola richiesta accettata, seconda rifiutata con `room_not_startable`, `handNumber` resta 1 e le carte totali restano 54
+* doppio `POST /api/rooms/:roomId/play` parallelo dello stesso player: una sola giocata accettata, seconda rifiutata con `cards_not_owned`, carte totali 53 e ultima giocata coerente
+* `pass` e `play` quasi simultanei dello stesso player: una sola azione accettata, l'altra rifiutata con `not_your_turn`, stato coerente
+* due WebSocket dello stesso player: chiuderne uno mantiene `connected=true`; chiuderli entrambi porta `connected=false`
+* reconnect durante mano in corso: sessione esistente rientra in fase `playing`, mantiene `cardCount` e aggiorna nome/connessione
+
+Test falliti: nessuno.
+
+Bug trovati: nessuno.
+
+Prossimo step consigliato: Step 9 - Persistenza e retention.
+
 ---
 
 ## Step 9 - Persistenza e retention
@@ -797,6 +873,33 @@ Prima versione:
 * Durable Object storage mantiene stanza e stato
 * eventi limitati agli ultimi 100
 * nessuno storico globale
+
+Stato: completato il 2026-06-13.
+
+Comandi eseguiti:
+
+* `npm run check`
+* `npm run build`
+* `npm run dev -- --port 8787`
+* suite Node manuale per persistenza e retention
+* `kill 68212`
+* `kill 68277`
+
+Test passati:
+
+* `npm run check` passa con `svelte-check` e `tsc` Worker
+* `npm run build` passa e rigenera `build/`
+* stato stanza persistente tra create/join e successive richieste `state`
+* eventi `player_joined` persistenti tra richieste
+* stato partita persistente dopo `start`: fase `playing`, `handNumber=1`, mani private coerenti 27+27 su 2 player
+* retention eventi: dopo 132 eventi totali, snapshot espone solo 100 eventi, con id contigui `33..132`
+* nessuno storico globale: `GET /api/rooms` risponde `404 not_found`
+
+Test falliti: nessuno.
+
+Bug trovati: nessuno.
+
+Prossimo step consigliato: Step 10 - Deploy.
 
 Possibili evoluzioni:
 

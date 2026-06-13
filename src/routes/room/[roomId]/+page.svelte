@@ -8,6 +8,7 @@
 	import Scoreboard from '../../../lib/components/Scoreboard.svelte';
 	import Table from '../../../lib/components/Table.svelte';
 	import {
+		ApiRequestError,
 		getRoomState,
 		joinRoom,
 		leaveRoom,
@@ -18,9 +19,9 @@
 		type RoomSnapshot
 	} from '../../../lib/cloudflare/rooms';
 	import { subscribeToRoom, type RoomSubscription } from '../../../lib/cloudflare/realtime';
-	import { getRoomSession } from '../../../lib/cloudflare/session';
+	import { clearRoomSession, getRoomSession } from '../../../lib/cloudflare/session';
 
-	type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
+	type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
 	let roomId = '';
 	let inviteToken = '';
@@ -28,12 +29,17 @@
 	let snapshot: RoomSnapshot | null = null;
 	let hasLocalSession = false;
 	let connectionState: ConnectionState = 'idle';
+	let connectionMessage = '';
 	let isLoading = true;
 	let isJoining = false;
 	let isActing = false;
 	let error = '';
 	let selectedCardIds: string[] = [];
 	let subscription: RoomSubscription | null = null;
+	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	let reconnectAttempts = 0;
+	let realtimeEnabled = false;
+	let activeConnectionId = 0;
 
 	$: currentPlayer = snapshot?.player ?? null;
 	$: isLobbyPhase = snapshot?.state.phase === 'waiting' || snapshot?.state.phase === 'ready';
@@ -75,15 +81,16 @@
 
 	async function loadExistingSession() {
 		error = '';
+		connectionMessage = '';
 		isLoading = true;
 
 		try {
 			snapshot = await getRoomState(roomId);
 			hasLocalSession = true;
+			reconnectAttempts = 0;
 			connectRealtime();
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Sessione locale non valida.';
-			hasLocalSession = false;
+			handleSessionLoadError(caughtError);
 		} finally {
 			isLoading = false;
 		}
@@ -97,6 +104,8 @@
 			const response = await joinRoom(roomId, inviteToken, playerName);
 			snapshot = response.snapshot;
 			hasLocalSession = true;
+			reconnectAttempts = 0;
+			connectionMessage = '';
 			connectRealtime();
 		} catch (caughtError) {
 			error = caughtError instanceof Error ? caughtError.message : 'Impossibile entrare nella stanza.';
@@ -206,35 +215,141 @@
 	}
 
 	function connectRealtime() {
-		disconnect();
-		connectionState = 'connecting';
+		realtimeEnabled = true;
+		clearReconnectTimer();
+		closeSubscription();
+
+		const connectionId = activeConnectionId + 1;
+		activeConnectionId = connectionId;
+		connectionState = reconnectAttempts > 0 ? 'reconnecting' : 'connecting';
+		connectionMessage = reconnectAttempts > 0 ? `Tentativo ${reconnectAttempts + 1} di riconnessione.` : '';
 
 		try {
 			subscription = subscribeToRoom(roomId, {
 				onOpen: () => {
+					if (connectionId !== activeConnectionId) {
+						return;
+					}
+
 					connectionState = 'connected';
+					connectionMessage = '';
+					reconnectAttempts = 0;
 				},
 				onClose: () => {
-					connectionState = 'disconnected';
+					if (connectionId !== activeConnectionId) {
+						return;
+					}
+
+					subscription = null;
+					scheduleReconnect('Connessione realtime chiusa. Riprovo automaticamente.');
 				},
 				onError: () => {
+					if (connectionId !== activeConnectionId) {
+						return;
+					}
+
 					connectionState = 'error';
+					connectionMessage = 'Errore realtime. Se la connessione si chiude, riprovo automaticamente.';
 				},
 				onMessage: (message) => {
+					if (connectionId !== activeConnectionId) {
+						return;
+					}
+
 					if ('snapshot' in message) {
 						snapshot = message.snapshot;
 					}
 				}
 			});
 		} catch (caughtError) {
-			connectionState = 'error';
-			error = caughtError instanceof Error ? caughtError.message : 'WebSocket non disponibile.';
+			scheduleReconnect(caughtError instanceof Error ? caughtError.message : 'WebSocket non disponibile.');
 		}
 	}
 
 	function disconnect() {
+		realtimeEnabled = false;
+		activeConnectionId += 1;
+		clearReconnectTimer();
+		closeSubscription();
+		connectionState = snapshot ? 'disconnected' : 'idle';
+		connectionMessage = '';
+	}
+
+	function closeSubscription() {
 		subscription?.unsubscribe();
 		subscription = null;
+	}
+
+	function scheduleReconnect(message: string) {
+		if (!realtimeEnabled || !hasLocalSession) {
+			connectionState = 'disconnected';
+			connectionMessage = message;
+			return;
+		}
+
+		connectionState = 'reconnecting';
+		const delay = Math.min(1000 * 2 ** reconnectAttempts, 10000);
+		connectionMessage = `${message} Prossimo tentativo tra ${Math.ceil(delay / 1000)}s.`;
+		reconnectAttempts += 1;
+		clearReconnectTimer();
+		reconnectTimer = setTimeout(() => {
+			reconnectTimer = null;
+			void refreshAndReconnect();
+		}, delay);
+	}
+
+	async function refreshAndReconnect() {
+		if (!realtimeEnabled || !hasLocalSession) {
+			return;
+		}
+
+		try {
+			snapshot = await getRoomState(roomId);
+			connectRealtime();
+		} catch (caughtError) {
+			if (isSessionError(caughtError)) {
+				handleInvalidLocalSession(caughtError.message);
+				return;
+			}
+
+			scheduleReconnect(caughtError instanceof Error ? caughtError.message : 'Riconnessione non riuscita.');
+		}
+	}
+
+	function clearReconnectTimer() {
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
+	}
+
+	function handleSessionLoadError(caughtError: unknown) {
+		if (isSessionError(caughtError)) {
+			handleInvalidLocalSession(caughtError.message);
+			return;
+		}
+
+		error = caughtError instanceof Error ? caughtError.message : 'Sessione locale non caricata.';
+		hasLocalSession = false;
+		connectionState = 'error';
+		connectionMessage = 'Non riesco a recuperare lo stato stanza. Puoi riprovare ricaricando la pagina.';
+	}
+
+	function handleInvalidLocalSession(message: string) {
+		clearRoomSession(roomId);
+		disconnect();
+		snapshot = null;
+		hasLocalSession = false;
+		error = `${message} Rientra con il link invito.`;
+		connectionState = 'idle';
+		connectionMessage = 'Sessione locale rimossa.';
+	}
+
+	function isSessionError(error: unknown): error is ApiRequestError {
+		return (
+			error instanceof ApiRequestError &&
+			['unauthorized', 'invalid_player_session', 'not_room_participant'].includes(error.code)
+		);
 	}
 
 	function getRoomIdFromPath(pathname: string): string {
@@ -253,7 +368,7 @@
 <main class="room-shell">
 	<header class="topbar">
 		<a href="/" class="home-link">Murlan</a>
-		<ConnectionStatus state={connectionState} />
+		<ConnectionStatus state={connectionState} detail={connectionMessage} />
 	</header>
 
 	{#if isLoading}

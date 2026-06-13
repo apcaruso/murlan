@@ -5,6 +5,17 @@ import type { JoinRoomResponse, RoomCreatedResponse, RoomEvent, RoomSnapshot } f
 
 export type { ClientCard, JoinRoomResponse, PlayerSession, RoomCreatedResponse, RoomEvent, RoomSnapshot };
 
+export class ApiRequestError extends Error {
+	constructor(
+		readonly status: number,
+		readonly code: string,
+		message: string
+	) {
+		super(message);
+		this.name = 'ApiRequestError';
+	}
+}
+
 export async function createRoom(name: string, maxPlayers = 5): Promise<RoomCreatedResponse> {
 	const response = await requestJson<RoomCreatedResponse>('/api/rooms', {
 		method: 'POST',
@@ -93,7 +104,7 @@ async function requestJson<T>(
 	const data = (await response.json()) as unknown;
 
 	if (!response.ok) {
-		throw new Error(getErrorMessage(data));
+		throw getApiRequestError(response.status, data);
 	}
 
 	return data as T;
@@ -113,18 +124,20 @@ function normalizeRoomId(roomId: string): string {
 	return roomId.trim().toUpperCase();
 }
 
-function getErrorMessage(data: unknown): string {
+function getApiRequestError(status: number, data: unknown): ApiRequestError {
 	if (
 		typeof data === 'object' &&
 		data !== null &&
 		'error' in data &&
 		typeof data.error === 'object' &&
 		data.error !== null &&
+		'code' in data.error &&
+		typeof data.error.code === 'string' &&
 		'message' in data.error &&
 		typeof data.error.message === 'string'
 	) {
-		return data.error.message;
+		return new ApiRequestError(status, data.error.code, data.error.message);
 	}
 
-	return 'Request failed.';
+	return new ApiRequestError(status, 'request_failed', 'Request failed.');
 }
