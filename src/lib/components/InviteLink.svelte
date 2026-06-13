@@ -4,12 +4,14 @@
 	let copied = false;
 	let copyFailed = false;
 
+	$: absoluteInviteUrl = getAbsoluteInviteUrl(inviteUrl);
+
 	async function copyInviteUrl() {
 		copied = false;
 		copyFailed = false;
 
 		try {
-			await navigator.clipboard.writeText(inviteUrl);
+			await navigator.clipboard.writeText(absoluteInviteUrl);
 			copied = true;
 		} catch {
 			copyFailed = true;
@@ -20,15 +22,28 @@
 			copied = false;
 		}, 1800);
 	}
+
+	function getAbsoluteInviteUrl(value: string): string {
+		if (!value) {
+			return '';
+		}
+
+		try {
+			const baseUrl = typeof window === 'undefined' ? 'https://murlan.local' : window.location.origin;
+			return new URL(value, baseUrl).toString();
+		} catch {
+			return value;
+		}
+	}
 </script>
 
 <div class="invite-link">
 	<label>
 		Link invito
-		<input readonly value={inviteUrl} on:focus={(event) => event.currentTarget.select()} />
+		<input readonly value={absoluteInviteUrl} on:focus={(event) => event.currentTarget.select()} />
 	</label>
 
-	<button type="button" class="secondary" on:click={copyInviteUrl} disabled={!inviteUrl}>
+	<button type="button" class="secondary" on:click={copyInviteUrl} disabled={!absoluteInviteUrl}>
 		{copied ? 'Copiato' : 'Copia link'}
 	</button>
 </div>

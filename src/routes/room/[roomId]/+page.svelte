@@ -25,6 +25,7 @@
 
 	let roomId = '';
 	let inviteToken = '';
+	let hasInviteFromLink = false;
 	let playerName = '';
 	let snapshot: RoomSnapshot | null = null;
 	let hasLocalSession = false;
@@ -49,6 +50,13 @@
 	$: canPlay = isCurrentTurn && selectedCardIds.length > 0;
 	$: canPass = isCurrentTurn && snapshot?.state.lastPlay !== null;
 	$: canStartNextHand = currentPlayer?.isHost === true && snapshot?.state.phase === 'hand_finished';
+	$: isFirstOpeningMove =
+		snapshot?.state.phase === 'playing' &&
+		snapshot.state.handNumber === 1 &&
+		snapshot.state.lastPlay === null &&
+		snapshot.state.finishOrder.length === 0 &&
+		snapshot.state.passedPlayerIds.length === 0;
+	$: highlightedCardIds = isFirstOpeningMove ? ['spades-3'] : [];
 	$: if (snapshot) {
 		const availableCardIds = new Set(snapshot.hand.map((card) => card.id));
 		const validSelectedCardIds = selectedCardIds.filter((cardId) => availableCardIds.has(cardId));
@@ -62,6 +70,7 @@
 		const url = new URL(window.location.href);
 		roomId = getRoomIdFromPath(url.pathname);
 		inviteToken = url.searchParams.get('invite') ?? '';
+		hasInviteFromLink = inviteToken.length > 0;
 		hasLocalSession = roomId.length > 0 && getRoomSession(roomId) !== null;
 
 		if (!roomId) {
@@ -103,14 +112,14 @@
 		isJoining = true;
 
 		try {
-			const response = await joinRoom(roomId, inviteToken, playerName);
+			const response = await joinRoom(roomId, getInviteCode(inviteToken), playerName);
 			snapshot = response.snapshot;
 			hasLocalSession = true;
 			reconnectAttempts = 0;
 			connectionMessage = '';
 			connectRealtime();
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Impossibile entrare nella stanza.';
+			error = getPlayerErrorMessage(caughtError, 'Impossibile entrare nella stanza.');
 		} finally {
 			isJoining = false;
 		}
@@ -128,7 +137,7 @@
 			const response = await setReady(roomId, !snapshot.player.ready);
 			snapshot = response.snapshot;
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Stato non aggiornato.';
+			error = getPlayerErrorMessage(caughtError, 'Stato non aggiornato.');
 		} finally {
 			isActing = false;
 		}
@@ -142,7 +151,7 @@
 			const response = await startGame(roomId);
 			snapshot = response.snapshot;
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Impossibile iniziare la partita.';
+			error = getPlayerErrorMessage(caughtError, 'Impossibile iniziare la partita.');
 		} finally {
 			isActing = false;
 		}
@@ -161,7 +170,7 @@
 			snapshot = response.snapshot;
 			selectedCardIds = [];
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Giocata rifiutata.';
+			error = getPlayerErrorMessage(caughtError, 'Giocata rifiutata.');
 		} finally {
 			isActing = false;
 		}
@@ -180,7 +189,7 @@
 			snapshot = response.snapshot;
 			selectedCardIds = [];
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Passaggio rifiutato.';
+			error = getPlayerErrorMessage(caughtError, 'Passaggio rifiutato.');
 		} finally {
 			isActing = false;
 		}
@@ -210,7 +219,7 @@
 			snapshot = null;
 			hasLocalSession = false;
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Impossibile uscire dalla stanza.';
+			error = getPlayerErrorMessage(caughtError, 'Impossibile uscire dalla stanza.');
 		} finally {
 			isActing = false;
 		}
@@ -331,7 +340,7 @@
 			return;
 		}
 
-		error = caughtError instanceof Error ? caughtError.message : 'Non riesco a farti rientrare in questa stanza.';
+		error = getPlayerErrorMessage(caughtError, 'Non riesco a farti rientrare in questa stanza.');
 		hasLocalSession = false;
 		connectionState = 'error';
 		connectionMessage = 'Non riesco a recuperare lo stato stanza. Puoi riprovare ricaricando la pagina.';
@@ -354,12 +363,55 @@
 		);
 	}
 
+	function getPlayerErrorMessage(caughtError: unknown, fallback: string): string {
+		if (caughtError instanceof ApiRequestError) {
+			const messages: Record<string, string> = {
+				invalid_opening_move: 'La prima giocata deve contenere il 3 di picche.',
+				cannot_beat_previous: 'Serve una giocata dello stesso tipo, con lo stesso numero di carte, ma piu alta.',
+				invalid_combination: 'Queste carte non formano una giocata valida.',
+				cards_not_owned: 'Una o piu carte non sono piu nella tua mano.',
+				not_your_turn: 'Non e il tuo turno.',
+				cannot_pass_without_play: 'Puoi passare solo dopo una giocata sul tavolo.',
+				player_finished: 'Hai gia chiuso questa mano.',
+				invalid_phase: 'Questa azione non e disponibile adesso.',
+				invalid_invite: 'Questo invito non e valido.',
+				room_not_joinable: 'Questa stanza non accetta nuovi giocatori.',
+				room_full: 'Il tavolo e pieno.',
+				not_enough_players: 'Servono almeno 2 giocatori.',
+				players_not_ready: 'Tutti gli altri giocatori devono essere pronti.',
+				host_required: 'Solo il capo tavolo puo avviare la partita.',
+				unauthorized: 'Rientra al tavolo con il link invito.',
+				invalid_player_session: 'Non riesco a riconoscerti in questa stanza.',
+				not_room_participant: 'Non sei seduto a questo tavolo.'
+			};
+
+			return messages[caughtError.code] ?? caughtError.message ?? fallback;
+		}
+
+		return caughtError instanceof Error ? caughtError.message : fallback;
+	}
+
 	function getRoomIdFromPath(pathname: string): string {
 		const parts = pathname.split('/').filter(Boolean);
 		const roomIndex = parts.indexOf('room');
 		const value = roomIndex === -1 ? parts.at(-1) : parts[roomIndex + 1];
 
 		return value ? decodeURIComponent(value).trim().toUpperCase() : '';
+	}
+
+	function getInviteCode(value: string): string {
+		const trimmedValue = value.trim();
+
+		if (!trimmedValue) {
+			return trimmedValue;
+		}
+
+		try {
+			const baseUrl = typeof window === 'undefined' ? 'https://murlan.local' : window.location.origin;
+			return new URL(trimmedValue, baseUrl).searchParams.get('invite')?.trim() || trimmedValue;
+		} catch {
+			return trimmedValue;
+		}
 	}
 </script>
 
@@ -446,6 +498,7 @@
 				<Hand
 					cards={snapshot.hand}
 					{selectedCardIds}
+					{highlightedCardIds}
 					disabled={!isCurrentTurn || isActing}
 					onToggleCard={toggleSelectedCard}
 				/>
@@ -458,8 +511,10 @@
 
 			{#if hasLocalSession}
 				<p>Ti ho riconosciuto, ma non riesco a riportarti al tavolo automaticamente.</p>
-			{:else if !inviteToken}
-				<p>Serve il codice invito per sederti a questo tavolo.</p>
+			{:else if hasInviteFromLink}
+				<p>Invito trovato. Inserisci il nome e siediti al tavolo.</p>
+			{:else}
+				<p>Incolla il link invito per sederti a questo tavolo.</p>
 			{/if}
 
 			<form on:submit|preventDefault={handleJoinRoom}>
@@ -468,10 +523,12 @@
 					<input bind:value={playerName} required maxlength="32" placeholder="Giocatore 2" />
 				</label>
 
-				<label>
-					Codice invito
-					<input bind:value={inviteToken} required placeholder="Codice invito" />
-				</label>
+				{#if !hasInviteFromLink}
+					<label>
+						Link o codice invito
+						<input bind:value={inviteToken} required placeholder="https://.../room/..." />
+					</label>
+				{/if}
 
 				{#if error}
 					<p class="error" role="alert">{error}</p>

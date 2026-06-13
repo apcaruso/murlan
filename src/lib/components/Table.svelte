@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PublicRoomState } from '../../worker/types';
+	import { getCardShortLabel } from '../game/cards';
 	import PlayerPanel from './PlayerPanel.svelte';
 
 	export let state: PublicRoomState;
@@ -54,7 +55,7 @@
 			<p>Ultima giocata di <strong>{playerName(state.lastPlay.playerId)}</strong></p>
 			<div class="played-cards">
 				{#each state.lastPlay.cards as card}
-					<span>{card.id}</span>
+					<span>{getCardShortLabel(card)}</span>
 				{/each}
 			</div>
 			<small>{combinationLabel(state.lastPlay.combination.type)}</small>

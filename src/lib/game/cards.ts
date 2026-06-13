@@ -56,20 +56,43 @@ const RANK_LABELS: Record<Rank, string> = {
 	'8': '8',
 	'9': '9',
 	'10': '10',
+	J: 'Fante',
+	Q: 'Regina',
+	K: 'Re',
+	A: 'Asso',
+	'2': '2',
+	black_joker: 'Jolly nero',
+	red_joker: 'Jolly rosso'
+};
+
+const SHORT_RANK_LABELS: Record<Rank, string> = {
+	'3': '3',
+	'4': '4',
+	'5': '5',
+	'6': '6',
+	'7': '7',
+	'8': '8',
+	'9': '9',
+	'10': '10',
 	J: 'J',
 	Q: 'Q',
 	K: 'K',
 	A: 'A',
 	'2': '2',
-	black_joker: 'Black Joker',
-	red_joker: 'Red Joker'
+	black_joker: 'Jolly',
+	red_joker: 'Jolly'
 };
 
 const SUIT_LABELS: Record<Suit, string> = {
-	clubs: 'Clubs',
-	diamonds: 'Diamonds',
-	hearts: 'Hearts',
-	spades: 'Spades'
+	clubs: 'Fiori',
+	diamonds: 'Quadri',
+	hearts: 'Cuori',
+	spades: 'Picche'
+};
+
+const JOKER_DETAIL_LABELS: Record<JokerRank, string> = {
+	black_joker: 'Nero',
+	red_joker: 'Rosso'
 };
 
 export function getCardValue(card: Card): number {
@@ -107,5 +130,25 @@ export function getCardLabel(card: Card): string {
 		return RANK_LABELS[card.rank];
 	}
 
-	return `${RANK_LABELS[card.rank]} of ${SUIT_LABELS[card.suit]}`;
+	return `${RANK_LABELS[card.rank]} di ${SUIT_LABELS[card.suit]}`;
+}
+
+export function getCardFaceLabel(card: Card): string {
+	return SHORT_RANK_LABELS[card.rank];
+}
+
+export function getCardDetailLabel(card: Card): string {
+	if (isJoker(card)) {
+		return JOKER_DETAIL_LABELS[card.rank];
+	}
+
+	return SUIT_LABELS[card.suit];
+}
+
+export function getCardShortLabel(card: Card): string {
+	if (isJoker(card)) {
+		return getCardLabel(card);
+	}
+
+	return `${SHORT_RANK_LABELS[card.rank]} ${SUIT_LABELS[card.suit]}`;
 }

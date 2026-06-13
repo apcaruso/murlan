@@ -5,6 +5,7 @@
 	export let cards: ClientCard[] = [];
 	export let selectedCardIds: string[] = [];
 	export let disabled = false;
+	export let highlightedCardIds: string[] = [];
 	export let onToggleCard: (cardId: string) => void = () => {};
 
 	const rankValues: Record<string, number> = {
@@ -33,6 +34,7 @@
 
 	$: sortedCards = [...cards].sort(compareCards);
 	$: selected = new Set(selectedCardIds);
+	$: highlighted = new Set(highlightedCardIds);
 
 	function compareCards(left: ClientCard, right: ClientCard): number {
 		const rankDifference = rankValues[left.rank] - rankValues[right.rank];
@@ -63,6 +65,7 @@
 				<CardComponent
 					{card}
 					selected={selected.has(card.id)}
+					highlighted={highlighted.has(card.id)}
 					{disabled}
 					onToggle={onToggleCard}
 				/>
