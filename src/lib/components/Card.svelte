@@ -7,7 +7,6 @@
 	export let onToggle: (cardId: string) => void = () => {};
 
 	$: suit = 'suit' in card ? card.suit : null;
-	$: isRed = suit === 'hearts' || suit === 'diamonds' || card.rank === 'red_joker';
 	$: label = suit ? `${card.rank}${suitSymbol(suit)}` : jokerLabel(card.rank);
 
 	function suitSymbol(suitName: string): string {
@@ -30,7 +29,6 @@
 	type="button"
 	class="card"
 	class:selected
-	class:red={isRed}
 	disabled={disabled}
 	on:click={() => onToggle(card.id)}
 	aria-pressed={selected}
@@ -43,36 +41,40 @@
 <style>
 	.card {
 		position: relative;
-		min-width: 4.2rem;
-		min-height: 5.8rem;
-		border: 1px solid rgba(17, 24, 22, 0.18);
-		border-radius: 0.9rem;
+		display: grid;
+		grid-template-rows: 1fr auto;
+		place-items: center;
+		min-width: clamp(4.35rem, 8vw, 5.35rem);
+		min-height: clamp(6.1rem, 11vw, 7.45rem);
+		border: 1px solid var(--white);
+		border-radius: 1rem;
 		padding: 0.65rem;
-		background: #f6f2e9;
-		color: #111816;
-		box-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.2);
+		background: var(--white);
+		color: var(--black);
+		box-shadow: 0 0.8rem 1.8rem rgba(0, 0, 0, 0.34);
 		cursor: pointer;
 		font: inherit;
-		text-align: left;
+		text-align: center;
 		transition:
 			transform 120ms ease,
 			box-shadow 120ms ease,
-			outline-color 120ms ease;
+			background 120ms ease,
+			color 120ms ease;
 	}
 
 	.card:hover:not(:disabled),
 	.card.selected {
-		transform: translateY(-0.55rem);
-		box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.28);
+		transform: translateY(-0.65rem) scale(1.02);
+		box-shadow: 0 1.2rem 2.2rem rgba(0, 0, 0, 0.48);
 	}
 
 	.card.selected {
-		outline: 3px solid #8df0ad;
-		outline-offset: 2px;
-	}
-
-	.card.red {
-		color: #b93636;
+		z-index: 2;
+		background: var(--black);
+		color: var(--white);
+		box-shadow:
+			0 0 0 2px var(--white),
+			0 1.2rem 2.2rem rgba(0, 0, 0, 0.58);
 	}
 
 	.card:disabled {
@@ -81,25 +83,51 @@
 	}
 
 	.rank {
-		display: block;
-		font-size: 1.35rem;
+		display: grid;
+		place-items: center;
+		width: 100%;
+		height: 100%;
+		font-size: clamp(1.25rem, 3vw, 1.75rem);
 		font-weight: 950;
 		letter-spacing: -0.04em;
-	}
-
-	.id {
-		position: absolute;
-		right: 0.55rem;
-		bottom: 0.55rem;
-		left: 0.55rem;
-		color: rgba(17, 24, 22, 0.6);
-		font-size: 0.62rem;
-		font-weight: 900;
-		line-height: 1.1;
+		line-height: 1;
 		text-transform: uppercase;
 	}
 
-	.card.red .id {
-		color: rgba(185, 54, 54, 0.65);
+	.id {
+		display: block;
+		max-width: 100%;
+		overflow: hidden;
+		color: currentColor;
+		font-size: 0.62rem;
+		font-weight: 900;
+		line-height: 1.1;
+		opacity: 0.62;
+		text-align: center;
+		text-overflow: ellipsis;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	@media (max-width: 760px) {
+		.card {
+			min-width: 3.7rem;
+			min-height: 5.25rem;
+			border-radius: 0.78rem;
+			padding: 0.45rem;
+		}
+
+		.card:hover:not(:disabled),
+		.card.selected {
+			transform: translateY(-0.55rem) scale(1.02);
+		}
+
+		.rank {
+			font-size: 1.18rem;
+		}
+
+		.id {
+			font-size: 0.52rem;
+		}
 	}
 </style>

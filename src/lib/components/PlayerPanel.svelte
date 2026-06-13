@@ -16,7 +16,7 @@
 
 	<div class="badges">
 		{#if isSelf}<span>tu</span>{/if}
-		{#if player.isHost}<span>host</span>{/if}
+		{#if player.isHost}<span>capo tavolo</span>{/if}
 		{#if isCurrent}<span class="turn">turno</span>{/if}
 		{#if isController}<span class="control">controllo</span>{/if}
 		{#if hasPassed}<span>pass</span>{/if}
@@ -28,19 +28,20 @@
 	.player-panel {
 		display: grid;
 		gap: 0.7rem;
-		border: 1px solid rgba(246, 242, 233, 0.14);
+		border: 1px solid var(--line);
 		border-radius: 1rem;
 		padding: 0.85rem;
-		background: rgba(8, 12, 10, 0.28);
+		background: var(--wash);
+		text-align: center;
 	}
 
 	.player-panel.current {
-		border-color: rgba(141, 240, 173, 0.72);
-		box-shadow: 0 0 0 2px rgba(141, 240, 173, 0.18);
+		border-color: var(--white);
+		box-shadow: 0 0 0 2px rgba(247, 247, 242, 0.16);
 	}
 
 	.player-panel.self {
-		background: rgba(141, 240, 173, 0.08);
+		background: var(--wash-strong);
 	}
 
 	strong,
@@ -53,29 +54,66 @@
 	}
 
 	div > span {
-		color: #b7c8bc;
+		color: var(--white-2);
 		font-size: 0.9rem;
 	}
 
 	.badges {
 		display: flex;
 		flex-wrap: wrap;
+		justify-content: center;
 		gap: 0.35rem;
 	}
 
 	.badges span {
+		display: inline-grid;
+		min-height: 1.65rem;
+		place-items: center;
+		border: 1px solid var(--line);
 		border-radius: 999px;
 		padding: 0.3rem 0.55rem;
-		background: rgba(246, 242, 233, 0.08);
-		color: #d8d4c9;
+		background: transparent;
+		color: var(--white-2);
 		font-size: 0.68rem;
 		font-weight: 900;
+		text-align: center;
 		text-transform: uppercase;
 	}
 
 	.badges .turn,
 	.badges .control,
 	.badges .connected {
-		color: #8df0ad;
+		border-color: var(--white);
+		background: var(--white);
+		color: var(--black);
+	}
+
+	@media (max-width: 760px) {
+		.player-panel {
+			gap: 0.4rem;
+			border-radius: 0.8rem;
+			padding: 0.55rem;
+		}
+
+		strong {
+			overflow: hidden;
+			font-size: 0.9rem;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		div > span {
+			font-size: 0.74rem;
+		}
+
+		.badges {
+			gap: 0.25rem;
+		}
+
+		.badges span {
+			min-height: 1.35rem;
+			padding: 0.22rem 0.38rem;
+			font-size: 0.56rem;
+		}
 	}
 </style>

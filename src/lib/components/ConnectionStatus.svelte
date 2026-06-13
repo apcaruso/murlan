@@ -10,7 +10,7 @@
 		connected: 'online',
 		reconnecting: 'riconnessione...',
 		disconnected: 'disconnesso',
-		error: 'errore realtime'
+		error: 'problema rete'
 	};
 </script>
 
@@ -28,13 +28,15 @@
 	.connection {
 		display: inline-grid;
 		gap: 0.5rem;
-		border: 1px solid rgba(246, 242, 233, 0.16);
+		place-items: center;
+		border: 1px solid var(--line);
 		border-radius: 999px;
 		padding: 0.42rem 0.7rem;
-		background: rgba(246, 242, 233, 0.08);
-		color: #d8d4c9;
+		background: rgba(5, 5, 5, 0.78);
+		color: var(--white-2);
 		font-size: 0.78rem;
 		font-weight: 900;
+		text-align: center;
 		text-transform: uppercase;
 	}
 
@@ -46,7 +48,7 @@
 
 	small {
 		max-width: 18rem;
-		color: rgba(246, 242, 233, 0.72);
+		color: var(--white-2);
 		font-size: 0.68rem;
 		font-weight: 800;
 		line-height: 1.25;
@@ -62,16 +64,20 @@
 	}
 
 	.connection[data-state='connected'] {
-		color: #8df0ad;
+		border-color: var(--white);
+		background: var(--white);
+		color: var(--black);
 	}
 
 	.connection[data-state='connecting'],
 	.connection[data-state='reconnecting'] {
-		color: #f1d281;
+		border-style: dashed;
+		color: var(--white);
 	}
 
 	.connection[data-state='disconnected'],
 	.connection[data-state='error'] {
-		color: #ffb4a8;
+		border-color: var(--line-strong);
+		color: var(--white);
 	}
 </style>

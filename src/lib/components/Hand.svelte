@@ -76,7 +76,8 @@
 <style>
 	.hand {
 		display: grid;
-		gap: 1rem;
+		gap: 0.75rem;
+		min-width: 0;
 	}
 
 	.hand-header {
@@ -88,10 +89,10 @@
 
 	.eyebrow {
 		margin: 0 0 0.3rem;
-		color: #8df0ad;
+		color: var(--white-2);
 		font-size: 0.72rem;
 		font-weight: 900;
-		letter-spacing: 0.16em;
+		letter-spacing: 0.22em;
 		text-transform: uppercase;
 	}
 
@@ -106,14 +107,62 @@
 
 	.hand-header span,
 	.empty {
-		color: #b7c8bc;
+		color: var(--white-2);
 		font-weight: 800;
 	}
 
 	.cards {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.7rem;
-		padding-top: 0.6rem;
+		gap: clamp(0.45rem, 1.2vw, 0.7rem);
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding: 0.75rem 0.25rem 1.05rem;
+		scroll-padding-inline: 1rem;
+		scroll-snap-type: x proximity;
+	}
+
+	.cards :global(.card) {
+		flex: 0 0 auto;
+		scroll-snap-align: center;
+	}
+
+	@media (max-width: 760px) {
+		.hand {
+			gap: 0.45rem;
+		}
+
+		.hand-header {
+			align-items: flex-start;
+			gap: 0.55rem;
+		}
+
+		.hand-header h2 {
+			font-size: 0.95rem;
+		}
+
+		.hand-header span {
+			font-size: 0.78rem;
+		}
+
+		.cards {
+			gap: 0;
+			margin-inline: -0.45rem;
+			overflow-y: visible;
+			padding: 0.65rem 0.45rem 0.85rem;
+			scroll-snap-type: x mandatory;
+		}
+
+		.cards :global(.card) {
+			margin-right: -1.05rem;
+			scroll-snap-align: start;
+		}
+
+		.cards :global(.card:last-child) {
+			margin-right: 0;
+		}
+
+		.cards :global(.card.selected) {
+			margin-right: -0.55rem;
+		}
 	}
 </style>

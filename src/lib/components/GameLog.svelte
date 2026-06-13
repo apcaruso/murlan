@@ -8,17 +8,17 @@
 
 	function eventTitle(event: RoomEvent): string {
 		const labels: Record<string, string> = {
-			player_joined: 'Player entrato',
-			player_rejoined: 'Player rientrato',
-			player_left: 'Player uscito',
-			host_changed: 'Host cambiato',
-			ready_changed: 'Ready aggiornato',
+			player_joined: 'Giocatore entrato',
+			player_rejoined: 'Giocatore rientrato',
+			player_left: 'Giocatore uscito',
+			host_changed: 'Nuovo capo tavolo',
+			ready_changed: 'Prontezza aggiornata',
 			game_started: 'Partita iniziata',
 			hand_started: 'Mano iniziata',
 			play_accepted: 'Giocata valida',
 			player_passed: 'Passaggio',
-			turn_changed: 'Controllo cambiato',
-			player_finished: 'Player ha chiuso',
+			turn_changed: 'Nuovo controllo',
+			player_finished: 'Giocatore ha chiuso',
 			hand_finished: 'Mano conclusa',
 			game_finished: 'Partita conclusa'
 		};
@@ -26,27 +26,10 @@
 		return labels[event.type] ?? event.type;
 	}
 
-	function payloadSummary(payload: Record<string, unknown>): string {
-		const entries = Object.entries(payload).slice(0, 3);
-
-		return entries.map(([key, value]) => `${key}: ${formatValue(value)}`).join(' · ');
-	}
-
-	function formatValue(value: unknown): string {
-		if (Array.isArray(value)) {
-			return `${value.length} elementi`;
-		}
-
-		if (typeof value === 'object' && value !== null) {
-			return 'oggetto';
-		}
-
-		return String(value);
-	}
 </script>
 
 <section class="game-log">
-	<h2>Log eventi</h2>
+	<h2>Cronologia</h2>
 
 	{#if recentEvents.length > 0}
 		<ol>
@@ -54,9 +37,6 @@
 				<li>
 					<strong>{eventTitle(event)}</strong>
 					<span>{new Date(event.createdAt).toLocaleTimeString()}</span>
-					{#if Object.keys(event.payload).length > 0}
-						<p>{payloadSummary(event.payload)}</p>
-					{/if}
 				</li>
 			{/each}
 		</ol>
@@ -89,9 +69,11 @@
 	}
 
 	li {
+		border: 1px solid var(--line);
 		border-radius: 0.85rem;
 		padding: 0.7rem;
-		background: rgba(8, 12, 10, 0.26);
+		background: var(--wash);
+		text-align: center;
 	}
 
 	strong,
@@ -102,7 +84,7 @@
 	span,
 	p,
 	.empty {
-		color: #b7c8bc;
+		color: var(--white-2);
 		font-size: 0.86rem;
 	}
 

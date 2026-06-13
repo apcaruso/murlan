@@ -10,7 +10,7 @@
 <section class="scoreboard">
 	<div class="header">
 		<h2>Punteggi</h2>
-		<span>Target {targetScore}</span>
+		<span>Si vince a {targetScore}</span>
 	</div>
 
 	<ol>
@@ -43,7 +43,7 @@
 	}
 
 	.header span {
-		color: #b7c8bc;
+		color: var(--white-2);
 		font-weight: 800;
 	}
 
@@ -56,9 +56,12 @@
 	}
 
 	li {
+		min-height: 2.8rem;
+		border: 1px solid var(--line);
 		border-radius: 0.8rem;
 		padding: 0.65rem 0.75rem;
-		background: rgba(8, 12, 10, 0.26);
+		background: var(--wash);
+		text-align: center;
 	}
 
 	li span {
@@ -66,7 +69,13 @@
 	}
 
 	li strong {
-		color: #8df0ad;
+		display: inline-grid;
+		min-width: 2rem;
+		min-height: 2rem;
+		place-items: center;
+		border-radius: 999px;
+		background: var(--white);
+		color: var(--black);
 		font-size: 1.15rem;
 	}
 </style>

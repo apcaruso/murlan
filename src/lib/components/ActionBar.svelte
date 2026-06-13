@@ -12,21 +12,21 @@
 	export let onStartNextHand: () => void | Promise<void> = () => {};
 </script>
 
-<section class="action-bar">
+<section class="action-bar" class:active={isCurrentTurn}>
 	<div>
 		<p class="status">
 			{#if isCurrentTurn}
-				Tocca a te.
+				Tocca a te
 			{:else}
-				In attesa del tuo turno.
+				In attesa del turno
 			{/if}
 		</p>
-		<p class="selected">Carte selezionate: {selectedCount}</p>
+		<p class="selected">{selectedCount} carte selezionate</p>
 	</div>
 
 	<div class="buttons">
 		<button type="button" on:click={onPlay} disabled={!canPlay || isActing}>
-			Gioca carte
+			Gioca
 		</button>
 		<button type="button" class="secondary" on:click={onPass} disabled={!canPass || isActing}>
 			Passa
@@ -52,6 +52,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
+		min-width: 0;
 	}
 
 	p {
@@ -59,11 +60,14 @@
 	}
 
 	.status {
+		font-size: clamp(1.1rem, 2.4vw, 1.55rem);
 		font-weight: 900;
+		letter-spacing: -0.04em;
+		text-transform: uppercase;
 	}
 
 	.selected {
-		color: #b7c8bc;
+		color: var(--white-2);
 		font-size: 0.9rem;
 		font-weight: 800;
 	}
@@ -76,28 +80,48 @@
 	}
 
 	button {
-		border: 0;
+		display: inline-grid;
+		min-height: 2.9rem;
+		min-width: 7.2rem;
+		place-items: center;
+		border: 1px solid var(--white);
 		border-radius: 999px;
 		padding: 0.85rem 1rem;
-		background: #8df0ad;
-		color: #0d1711;
+		background: var(--white);
+		color: var(--black);
 		font: inherit;
 		font-weight: 900;
+		letter-spacing: 0.08em;
+		text-align: center;
+		text-transform: uppercase;
 		cursor: pointer;
+		transition:
+			transform 140ms ease,
+			background 140ms ease,
+			color 140ms ease,
+			opacity 140ms ease;
+	}
+
+	button:hover:not(:disabled) {
+		transform: translateY(-2px);
+		background: var(--black);
+		color: var(--white);
 	}
 
 	button.secondary {
-		background: #f1d281;
+		background: var(--black);
+		color: var(--white);
 	}
 
 	button.ghost {
-		border: 1px solid rgba(246, 242, 233, 0.18);
+		border-color: var(--line);
 		background: transparent;
-		color: #f6f2e9;
+		color: var(--white);
 	}
 
 	button.next {
-		background: #f6f2e9;
+		background: var(--white);
+		color: var(--black);
 	}
 
 	button:disabled {
@@ -107,22 +131,57 @@
 
 	.error {
 		flex-basis: 100%;
-		color: #ffb4a8;
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-sm);
+		padding: 0.65rem 0.8rem;
+		background: var(--wash);
+		color: var(--white);
 		font-weight: 800;
+		text-align: center;
 	}
 
 	@media (max-width: 760px) {
 		.action-bar {
 			align-items: stretch;
 			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.action-bar > div:first-child {
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+			gap: 0.75rem;
+		}
+
+		.status {
+			font-size: 0.98rem;
+		}
+
+		.selected {
+			font-size: 0.72rem;
+			text-align: right;
+			white-space: nowrap;
 		}
 
 		.buttons {
-			justify-content: stretch;
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.45rem;
 		}
 
 		button {
-			flex: 1;
+			min-width: 0;
+			min-height: 2.75rem;
+			padding: 0.7rem 0.75rem;
+			font-size: 0.82rem;
+		}
+
+		button.ghost,
+		button.next {
+			grid-column: 1 / -1;
+			min-height: 2.35rem;
+			font-size: 0.72rem;
 		}
 	}
 </style>

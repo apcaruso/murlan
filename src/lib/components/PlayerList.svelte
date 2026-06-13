@@ -8,7 +8,7 @@
 <div class="player-list">
 	<div class="list-header">
 		<h2>Giocatori</h2>
-		<span>{players.length} in lobby</span>
+		<span>{players.length} al tavolo</span>
 	</div>
 
 	<ul>
@@ -20,8 +20,8 @@
 				</div>
 
 				<div class="badges" aria-label={`Stato ${player.name}`}>
-					{#if player.isHost}<span class="host">host</span>{/if}
-					<span class:ready={player.ready}>{player.ready ? 'ready' : 'non ready'}</span>
+					{#if player.isHost}<span class="host">capo tavolo</span>{/if}
+					<span class:ready={player.ready}>{player.ready ? 'pronto' : 'non pronto'}</span>
 					<span class:connected={player.connected}>{player.connected ? 'online' : 'offline'}</span>
 				</div>
 			</li>
@@ -48,7 +48,7 @@
 	}
 
 	.list-header span {
-		color: #b7c8bc;
+		color: var(--white-2);
 		font-size: 0.9rem;
 		font-weight: 800;
 	}
@@ -63,15 +63,18 @@
 
 	li {
 		display: flex;
+		align-items: center;
 		justify-content: space-between;
 		gap: 0.8rem;
 		padding: 0.85rem;
+		border: 1px solid var(--line);
 		border-radius: 1rem;
-		background: rgba(8, 12, 10, 0.32);
+		background: var(--wash);
 	}
 
 	li.current {
-		outline: 2px solid rgba(141, 240, 173, 0.5);
+		border-color: var(--white);
+		background: var(--wash-strong);
 	}
 
 	.identity {
@@ -85,7 +88,7 @@
 	}
 
 	.identity span {
-		color: #b7c8bc;
+		color: var(--white-2);
 		font-size: 0.9rem;
 	}
 
@@ -97,23 +100,26 @@
 	}
 
 	.badges span {
-		border: 1px solid rgba(246, 242, 233, 0.16);
+		display: inline-grid;
+		min-height: 1.75rem;
+		place-items: center;
+		border: 1px solid var(--line);
 		border-radius: 999px;
 		padding: 0.35rem 0.65rem;
-		background: rgba(246, 242, 233, 0.08);
-		color: #d8d4c9;
+		background: rgba(5, 5, 5, 0.52);
+		color: var(--white-2);
 		font-size: 0.72rem;
 		font-weight: 900;
+		text-align: center;
 		text-transform: uppercase;
 	}
 
-	.badges span.host {
-		color: #f1d281;
-	}
-
+	.badges span.host,
 	.badges span.ready,
 	.badges span.connected {
-		color: #8df0ad;
+		border-color: var(--white);
+		background: var(--white);
+		color: var(--black);
 	}
 
 	@media (max-width: 760px) {

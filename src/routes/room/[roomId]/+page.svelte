@@ -42,6 +42,8 @@
 	let activeConnectionId = 0;
 
 	$: currentPlayer = snapshot?.player ?? null;
+	$: turnPlayer = snapshot?.state.players.find((player) => player.id === snapshot?.state.currentPlayerId) ?? null;
+	$: controllerPlayer = snapshot?.state.players.find((player) => player.id === snapshot?.state.controllerPlayerId) ?? null;
 	$: isLobbyPhase = snapshot?.state.phase === 'waiting' || snapshot?.state.phase === 'ready';
 	$: isCurrentTurn = snapshot?.state.phase === 'playing' && snapshot.state.currentPlayerId === currentPlayer?.id;
 	$: canPlay = isCurrentTurn && selectedCardIds.length > 0;
@@ -126,7 +128,7 @@
 			const response = await setReady(roomId, !snapshot.player.ready);
 			snapshot = response.snapshot;
 		} catch (caughtError) {
-			error = caughtError instanceof Error ? caughtError.message : 'Ready non aggiornato.';
+			error = caughtError instanceof Error ? caughtError.message : 'Stato non aggiornato.';
 		} finally {
 			isActing = false;
 		}
@@ -262,7 +264,7 @@
 				}
 			});
 		} catch (caughtError) {
-			scheduleReconnect(caughtError instanceof Error ? caughtError.message : 'WebSocket non disponibile.');
+			scheduleReconnect(caughtError instanceof Error ? caughtError.message : 'Connessione al tavolo non disponibile.');
 		}
 	}
 
@@ -329,7 +331,7 @@
 			return;
 		}
 
-		error = caughtError instanceof Error ? caughtError.message : 'Sessione locale non caricata.';
+		error = caughtError instanceof Error ? caughtError.message : 'Non riesco a farti rientrare in questa stanza.';
 		hasLocalSession = false;
 		connectionState = 'error';
 		connectionMessage = 'Non riesco a recuperare lo stato stanza. Puoi riprovare ricaricando la pagina.';
@@ -342,7 +344,7 @@
 		hasLocalSession = false;
 		error = `${message} Rientra con il link invito.`;
 		connectionState = 'idle';
-		connectionMessage = 'Sessione locale rimossa.';
+		connectionMessage = 'Rientro automatico disattivato.';
 	}
 
 	function isSessionError(error: unknown): error is ApiRequestError {
@@ -365,11 +367,13 @@
 	<title>{roomId ? `${roomId} - Murlan` : 'Stanza Murlan'}</title>
 </svelte:head>
 
-<main class="room-shell">
-	<header class="topbar">
-		<a href="/" class="home-link">Murlan</a>
-		<ConnectionStatus state={connectionState} detail={connectionMessage} />
-	</header>
+<main class={snapshot && !isLobbyPhase ? 'game-shell' : 'room-shell'}>
+	{#if !snapshot || isLobbyPhase}
+		<header class="topbar">
+			<a href="/" class="home-link">Murlan</a>
+			<ConnectionStatus state={connectionState} detail={connectionMessage} />
+		</header>
+	{/if}
 
 	{#if isLoading}
 		<section class="panel loading-panel">Caricamento stanza...</section>
@@ -383,16 +387,48 @@
 			onLeaveRoom={handleLeaveRoom}
 		/>
 	{:else if snapshot}
-		<section class="game-grid">
-			<div class="panel table-card">
+		<section class="game-screen" class:your-turn={isCurrentTurn}>
+			<header class="game-hud" aria-label="Stato partita">
+				<div class="hud-block">
+					<span>Room</span>
+					<strong>{snapshot.room.code}</strong>
+				</div>
+
+				<div class="hud-block turn-block" class:active={isCurrentTurn}>
+					<span>{isCurrentTurn ? 'Tocca a te' : 'Turno'}</span>
+					<strong>{turnPlayer?.name ?? 'nessuno'}</strong>
+				</div>
+
+				<div class="hud-block">
+					<span>Controllo</span>
+					<strong>{controllerPlayer?.name ?? 'nessuno'}</strong>
+				</div>
+
+				<ConnectionStatus state={connectionState} detail={connectionMessage} />
+			</header>
+
+			<section class="arena-card" aria-label="Tavolo di gioco">
 				<Table state={snapshot.state} currentPlayerId={currentPlayer?.id ?? null} />
-			</div>
+			</section>
 
-			<div class="panel score-card">
-				<Scoreboard players={snapshot.state.players} targetScore={snapshot.state.targetScore} />
-			</div>
+			<aside class="game-rail" aria-label="Informazioni partita">
+				<div class="panel score-card">
+					<Scoreboard players={snapshot.state.players} targetScore={snapshot.state.targetScore} />
+				</div>
 
-			<div class="panel action-card">
+				<div class="panel log-card">
+					<GameLog events={snapshot.events} />
+				</div>
+			</aside>
+
+			<details class="mobile-game-info">
+				<summary>Giocatori e punti</summary>
+				<div class="panel score-card">
+					<Scoreboard players={snapshot.state.players} targetScore={snapshot.state.targetScore} />
+				</div>
+			</details>
+
+			<section class="play-dock" aria-label="Controlli e mano">
 				<ActionBar
 					selectedCount={selectedCardIds.length}
 					{isCurrentTurn}
@@ -406,41 +442,35 @@
 					onClearSelection={clearSelection}
 					onStartNextHand={handleStartGame}
 				/>
-			</div>
 
-			<div class="panel hand-card">
 				<Hand
 					cards={snapshot.hand}
 					{selectedCardIds}
 					disabled={!isCurrentTurn || isActing}
 					onToggleCard={toggleSelectedCard}
 				/>
-			</div>
-
-			<div class="panel log-card">
-				<GameLog events={snapshot.events} />
-			</div>
+			</section>
 		</section>
 	{:else}
 		<section class="panel join-panel">
 			<p class="eyebrow">Stanza {roomId}</p>
-			<h1>Entra nella lobby</h1>
+			<h1>Entra al tavolo</h1>
 
 			{#if hasLocalSession}
-				<p>Sessione locale trovata ma non caricata.</p>
+				<p>Ti ho riconosciuto, ma non riesco a riportarti al tavolo automaticamente.</p>
 			{:else if !inviteToken}
-				<p>Non hai una sessione locale. Incolla un invite token per entrare.</p>
+				<p>Serve il codice invito per sederti a questo tavolo.</p>
 			{/if}
 
 			<form on:submit|preventDefault={handleJoinRoom}>
 				<label>
 					Nome giocatore
-					<input bind:value={playerName} required maxlength="32" placeholder="Player 2" />
+					<input bind:value={playerName} required maxlength="32" placeholder="Giocatore 2" />
 				</label>
 
 				<label>
-					Invite token
-					<input bind:value={inviteToken} required placeholder="Token invito" />
+					Codice invito
+					<input bind:value={inviteToken} required placeholder="Codice invito" />
 				</label>
 
 				{#if error}
@@ -448,7 +478,7 @@
 				{/if}
 
 				<button type="submit" disabled={isJoining || playerName.trim().length === 0 || inviteToken.trim().length === 0}>
-					{isJoining ? 'Ingresso...' : 'Entra nella stanza'}
+					{isJoining ? 'Ingresso...' : 'Siediti al tavolo'}
 				</button>
 			</form>
 		</section>
@@ -456,42 +486,29 @@
 </main>
 
 <style>
-	:global(body) {
-		margin: 0;
-		font-family:
-			Inter,
-			ui-sans-serif,
-			system-ui,
-			-apple-system,
-			BlinkMacSystemFont,
-			'Segoe UI',
-			sans-serif;
-		background: #111816;
-		color: #f6f2e9;
-	}
-
 	.room-shell {
-		min-height: 100vh;
-		padding: 1.25rem;
+		min-height: 100dvh;
+		padding: clamp(0.9rem, 2.4vw, 1.4rem);
 		background:
-			radial-gradient(circle at 90% 0%, rgba(67, 150, 112, 0.28), transparent 24rem),
-			linear-gradient(145deg, #111816 0%, #1d261f 100%);
+			linear-gradient(120deg, transparent 0 49%, rgba(247, 247, 242, 0.08) 49% 50%, transparent 50% 100%),
+			radial-gradient(circle at 88% 10%, rgba(247, 247, 242, 0.12), transparent 20rem),
+			linear-gradient(145deg, #050505 0%, #111111 100%);
+		overflow-x: hidden;
+	}
+
+	.game-shell {
+		min-height: 100dvh;
+		background:
+			linear-gradient(90deg, rgba(247, 247, 242, 0.06) 1px, transparent 1px),
+			linear-gradient(180deg, rgba(247, 247, 242, 0.05) 1px, transparent 1px),
+			radial-gradient(circle at 50% 14%, rgba(247, 247, 242, 0.12), transparent 20rem),
+			#050505;
+		background-size: 4rem 4rem, 4rem 4rem, auto, auto;
 	}
 
 	.topbar {
-		width: min(100%, 70rem);
+		width: min(100%, 76rem);
 		margin: 0 auto;
-	}
-
-	.game-grid {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.36fr);
-		gap: 1rem;
-		width: min(100%, 70rem);
-		margin: 0 auto;
-	}
-
-	.topbar {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -499,23 +516,20 @@
 	}
 
 	.home-link {
-		color: #f6f2e9;
+		color: var(--white);
 		font-weight: 900;
-		letter-spacing: -0.04em;
+		letter-spacing: 0.16em;
 		text-decoration: none;
+		text-transform: uppercase;
 	}
 
 	.panel {
-		border: 1px solid rgba(246, 242, 233, 0.14);
+		border: 1px solid var(--line);
 		border-radius: 1.4rem;
-		padding: 1.1rem;
-		background: rgba(246, 242, 233, 0.08);
-		box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.24);
-	}
-
-	.action-card,
-	.hand-card {
-		grid-column: 1 / -1;
+		padding: clamp(1rem, 2vw, 1.15rem);
+		background: rgba(5, 5, 5, 0.78);
+		box-shadow: var(--shadow);
+		backdrop-filter: blur(16px);
 	}
 
 	.loading-panel,
@@ -524,12 +538,23 @@
 		margin: 10vh auto 0;
 	}
 
+	.loading-panel {
+		display: grid;
+		min-height: 9rem;
+		place-items: center;
+		color: var(--white-2);
+		font-weight: 900;
+		letter-spacing: 0.18em;
+		text-align: center;
+		text-transform: uppercase;
+	}
+
 	.eyebrow {
 		margin: 0 0 0.5rem;
-		color: #8df0ad;
+		color: var(--white-2);
 		font-size: 0.75rem;
 		font-weight: 900;
-		letter-spacing: 0.16em;
+		letter-spacing: 0.22em;
 		text-transform: uppercase;
 	}
 
@@ -541,7 +566,8 @@
 	h1 {
 		font-size: clamp(2rem, 8vw, 4.5rem);
 		line-height: 0.95;
-		letter-spacing: -0.06em;
+		letter-spacing: -0.08em;
+		text-transform: uppercase;
 	}
 
 	form,
@@ -553,29 +579,47 @@
 	label {
 		font-size: 0.85rem;
 		font-weight: 800;
-		color: #cfe7d4;
+		color: var(--white-2);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 	}
 
 	input {
 		width: 100%;
 		box-sizing: border-box;
-		border: 1px solid rgba(246, 242, 233, 0.18);
+		border: 1px solid var(--line);
 		border-radius: 0.85rem;
 		padding: 0.8rem 0.95rem;
-		background: rgba(8, 12, 10, 0.58);
-		color: #f6f2e9;
+		background: var(--black);
+		color: var(--white);
 		font: inherit;
 	}
 
 	button {
-		border: 0;
+		display: inline-grid;
+		min-height: 2.85rem;
+		place-items: center;
+		border: 1px solid var(--white);
 		border-radius: 999px;
 		padding: 0.85rem 1rem;
-		background: #8df0ad;
-		color: #0d1711;
+		background: var(--white);
+		color: var(--black);
 		font: inherit;
 		font-weight: 900;
+		letter-spacing: 0.08em;
+		text-align: center;
+		text-transform: uppercase;
 		cursor: pointer;
+		transition:
+			transform 140ms ease,
+			background 140ms ease,
+			color 140ms ease;
+	}
+
+	button:hover:not(:disabled) {
+		transform: translateY(-2px);
+		background: var(--black);
+		color: var(--white);
 	}
 
 	button:disabled {
@@ -585,13 +629,162 @@
 
 	.error {
 		margin: 0;
-		color: #ffb4a8;
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-sm);
+		padding: 0.7rem 0.85rem;
+		background: var(--wash);
+		color: var(--white);
 		font-weight: 800;
+		text-align: center;
+	}
+
+	.game-screen {
+		min-height: 100dvh;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem);
+		grid-template-rows: auto minmax(0, 1fr) auto;
+		gap: clamp(0.75rem, 1.6vw, 1rem);
+		padding: clamp(0.65rem, 1.6vw, 1.1rem);
+	}
+
+	.game-hud {
+		grid-column: 1 / -1;
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+		gap: 0.75rem;
+		align-items: stretch;
+	}
+
+	.hud-block {
+		display: grid;
+		min-height: 4.1rem;
+		place-items: center;
+		border: 1px solid var(--line);
+		border-radius: 1.15rem;
+		padding: 0.65rem 0.8rem;
+		background: rgba(5, 5, 5, 0.78);
+		text-align: center;
+		box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.28);
+	}
+
+	.hud-block span {
+		color: var(--white-2);
+		font-size: 0.68rem;
+		font-weight: 900;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+	}
+
+	.hud-block strong {
+		overflow: hidden;
+		max-width: 100%;
+		font-size: clamp(1rem, 2vw, 1.35rem);
+		font-weight: 950;
+		letter-spacing: -0.04em;
+		text-overflow: ellipsis;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	.turn-block.active {
+		border-color: var(--white);
+		background: var(--white);
+		color: var(--black);
+		animation: turn-pulse 1100ms ease-in-out infinite alternate;
+	}
+
+	.turn-block.active span,
+	.turn-block.active strong {
+		color: var(--black);
+	}
+
+	.arena-card,
+	.play-dock {
+		border: 1px solid var(--line);
+		background: rgba(5, 5, 5, 0.82);
+		box-shadow: var(--shadow);
+		backdrop-filter: blur(18px);
+	}
+
+	.arena-card {
+		min-height: 0;
+		overflow: hidden;
+		border-radius: 1.6rem;
+		padding: clamp(0.8rem, 1.8vw, 1.15rem);
+	}
+
+	.game-rail {
+		min-height: 0;
+		display: grid;
+		align-content: start;
+		gap: 0.75rem;
+		overflow: hidden;
+	}
+
+	.log-card {
+		max-height: min(42vh, 24rem);
+		overflow: auto;
+	}
+
+	.mobile-game-info {
+		display: none;
+	}
+
+	.play-dock {
+		position: sticky;
+		bottom: max(clamp(0.5rem, 1.6vw, 0.9rem), env(safe-area-inset-bottom));
+		z-index: 10;
+		grid-column: 1 / -1;
+		display: grid;
+		gap: 0.85rem;
+		border-radius: 1.4rem;
+		padding: clamp(0.75rem, 1.6vw, 1rem);
+	}
+
+	.game-screen.your-turn .play-dock {
+		border-color: var(--white);
+		box-shadow:
+			0 0 0 1px rgba(247, 247, 242, 0.28),
+			0 1.5rem 4rem rgba(0, 0, 0, 0.62);
+	}
+
+	@keyframes turn-pulse {
+		from {
+			box-shadow: 0 0 0 rgba(247, 247, 242, 0);
+		}
+
+		to {
+			box-shadow: 0 0 1.6rem rgba(247, 247, 242, 0.36);
+		}
+	}
+
+	@media (max-width: 980px) {
+		.game-screen {
+			grid-template-columns: 1fr;
+			grid-template-rows: auto auto auto auto;
+		}
+
+		.game-hud {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.game-rail {
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		}
+
+		.log-card {
+			max-height: 14rem;
+		}
 	}
 
 	@media (max-width: 760px) {
 		.room-shell {
-			padding: 0.9rem;
+			padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+		}
+
+		.join-panel,
+		.loading-panel {
+			margin-top: 2rem;
 		}
 
 		.topbar {
@@ -600,8 +793,116 @@
 			gap: 0.75rem;
 		}
 
-		.game-grid {
+		.game-screen {
+			min-height: 100dvh;
 			grid-template-columns: 1fr;
+			grid-template-rows: auto minmax(0, 1fr) auto auto;
+			gap: 0.55rem;
+			padding: max(0.45rem, env(safe-area-inset-top)) 0.45rem max(0.45rem, env(safe-area-inset-bottom));
 		}
-	}
+
+		.game-hud {
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 0.45rem;
+			order: 1;
+		}
+
+		.game-hud > .hud-block:first-child {
+			display: none;
+		}
+
+		.game-hud > .turn-block {
+			grid-column: 1 / -1;
+		}
+
+		.game-hud > .hud-block:nth-of-type(3) {
+			grid-column: 1;
+		}
+
+		.game-hud :global(.connection) {
+			grid-column: 2;
+			align-self: stretch;
+			min-width: 4.9rem;
+			padding-inline: 0.55rem;
+		}
+
+		.game-hud :global(.connection small) {
+			display: none;
+		}
+
+		.hud-block {
+			min-height: 2.75rem;
+			border-radius: 0.9rem;
+			padding: 0.45rem 0.55rem;
+		}
+
+		.hud-block span {
+			font-size: 0.58rem;
+			letter-spacing: 0.14em;
+		}
+
+		.hud-block strong {
+			font-size: 1rem;
+		}
+
+		.arena-card {
+			order: 2;
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			border-radius: 1.15rem;
+			padding: 0.55rem;
+		}
+
+		.game-rail {
+			display: none;
+		}
+
+		.play-dock {
+			order: 3;
+			gap: 0.55rem;
+			border-radius: 1rem;
+			padding: 0.6rem;
+			bottom: max(0.45rem, env(safe-area-inset-bottom));
+		}
+
+		.mobile-game-info {
+			order: 4;
+			display: block;
+		}
+
+		.mobile-game-info summary {
+			display: grid;
+			min-height: 2.65rem;
+			place-items: center;
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			padding: 0.65rem 0.9rem;
+			background: rgba(5, 5, 5, 0.78);
+			color: var(--white);
+			font-weight: 900;
+			letter-spacing: 0.08em;
+			text-align: center;
+			text-transform: uppercase;
+			list-style: none;
+		}
+
+		.mobile-game-info summary::-webkit-details-marker {
+			display: none;
+		}
+
+		.mobile-game-info[open] summary {
+			border-radius: 1rem 1rem 0 0;
+		}
+
+		.mobile-game-info .panel {
+			border-top: 0;
+			border-radius: 0 0 1rem 1rem;
+			padding: 0.75rem;
+		}
+
+		.log-card {
+			display: none;
+		}
+		}
 </style>

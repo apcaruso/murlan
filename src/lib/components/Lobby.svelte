@@ -16,6 +16,18 @@
 	$: canToggleReady = Boolean(currentPlayer && !currentPlayer.isHost && isLobbyPhase);
 	$: canStart = currentPlayer?.isHost === true && snapshot.state.phase === 'ready';
 	$: readyPlayers = players.filter((player) => player.ready || player.isHost).length;
+
+	function phaseLabel(phase: string): string {
+		const labels: Record<string, string> = {
+			waiting: 'In attesa',
+			ready: 'Si parte',
+			playing: 'In gioco',
+			hand_finished: 'Mano finita',
+			game_finished: 'Partita finita'
+		};
+
+		return labels[phase] ?? phase;
+	}
 </script>
 
 <section class="lobby-grid">
@@ -26,7 +38,7 @@
 			<span>{players.length}/{snapshot.room.maxPlayers}</span>
 		</div>
 		<p class="phase-copy">
-			Fase <strong>{snapshot.state.phase}</strong>. Ready {readyPlayers}/{players.length}.
+			<strong>{phaseLabel(snapshot.state.phase)}</strong>. Pronti {readyPlayers}/{players.length}.
 		</p>
 
 		<InviteLink inviteUrl={snapshot.room.inviteUrl} />
@@ -38,21 +50,21 @@
 
 	<div class="panel actions-panel">
 		<div>
-			<p class="eyebrow">Azioni lobby</p>
-			<h2>{currentPlayer?.isHost ? 'Controlli host' : 'Preparazione player'}</h2>
+			<p class="eyebrow">Tavolo</p>
+			<h2>{currentPlayer?.isHost ? 'Controlli tavolo' : 'Preparati'}</h2>
 		</div>
 
 		<div class="actions">
 			{#if currentPlayer?.isHost}
 				<button type="button" on:click={onStartGame} disabled={!canStart || isActing}>
-					Start Game
+					Avvia partita
 				</button>
 				{#if snapshot.state.phase !== 'ready'}
-					<p class="hint">Tutti i non-host devono essere ready prima di iniziare.</p>
+					<p class="hint">Tutti gli altri giocatori devono essere pronti prima di iniziare.</p>
 				{/if}
 			{:else}
 				<button type="button" on:click={onReadyToggle} disabled={!canToggleReady || isActing}>
-					{currentPlayer?.ready ? 'Annulla ready' : 'Sono ready'}
+					{currentPlayer?.ready ? 'Non pronto' : 'Sono pronto'}
 				</button>
 			{/if}
 
@@ -65,19 +77,6 @@
 			<p class="error" role="alert">{error}</p>
 		{/if}
 	</div>
-
-	<div class="panel hand-panel">
-		<h2>La tua mano</h2>
-		{#if snapshot.hand.length > 0}
-			<div class="hand-list">
-				{#each snapshot.hand as card}
-					<span>{card.id}</span>
-				{/each}
-			</div>
-		{:else}
-			<p>Le carte saranno visibili quando la partita parte.</p>
-		{/if}
-	</div>
 </section>
 
 <style>
@@ -85,24 +84,43 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
 		gap: 1rem;
-		width: min(100%, 70rem);
+		width: min(100%, 76rem);
 		margin: 0 auto;
 	}
 
 	.panel {
-		border: 1px solid rgba(246, 242, 233, 0.14);
+		border: 1px solid var(--line);
 		border-radius: 1.4rem;
-		padding: 1.1rem;
-		background: rgba(246, 242, 233, 0.08);
-		box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.24);
+		padding: clamp(1rem, 2.5vw, 1.35rem);
+		background: rgba(5, 5, 5, 0.72);
+		box-shadow: var(--shadow);
+		backdrop-filter: blur(16px);
+	}
+
+	.room-summary {
+		position: relative;
+		overflow: hidden;
+	}
+
+	.room-summary::after {
+		position: absolute;
+		right: -4rem;
+		bottom: -4rem;
+		width: 14rem;
+		height: 14rem;
+		border: 1px solid var(--line);
+		border-radius: 50%;
+		content: '';
+		opacity: 0.75;
+		pointer-events: none;
 	}
 
 	.eyebrow {
 		margin: 0 0 0.5rem;
-		color: #8df0ad;
+		color: var(--white-2);
 		font-size: 0.75rem;
 		font-weight: 900;
-		letter-spacing: 0.16em;
+		letter-spacing: 0.22em;
 		text-transform: uppercase;
 	}
 
@@ -123,7 +141,8 @@
 		margin-bottom: 0;
 		font-size: clamp(2rem, 8vw, 4.5rem);
 		line-height: 0.95;
-		letter-spacing: -0.06em;
+		letter-spacing: -0.08em;
+		text-transform: uppercase;
 	}
 
 	h2 {
@@ -132,16 +151,21 @@
 	}
 
 	.room-code-row span {
+		display: inline-grid;
+		min-height: 2.1rem;
+		place-items: center;
 		border-radius: 999px;
 		padding: 0.35rem 0.7rem;
-		background: rgba(141, 240, 173, 0.16);
-		color: #8df0ad;
+		border: 1px solid var(--line);
+		background: var(--wash);
+		color: var(--white);
 		font-weight: 900;
+		text-align: center;
 	}
 
 	.phase-copy,
 	.hint {
-		color: #b7c8bc;
+		color: var(--white-2);
 	}
 
 	.actions {
@@ -152,18 +176,36 @@
 	}
 
 	button {
-		border: 0;
+		display: inline-grid;
+		min-height: 2.8rem;
+		place-items: center;
+		border: 1px solid var(--white);
 		border-radius: 999px;
 		padding: 0.85rem 1rem;
-		background: #8df0ad;
-		color: #0d1711;
+		background: var(--white);
+		color: var(--black);
 		font: inherit;
 		font-weight: 900;
+		letter-spacing: 0.06em;
+		text-align: center;
+		text-transform: uppercase;
 		cursor: pointer;
+		transition:
+			transform 140ms ease,
+			background 140ms ease,
+			color 140ms ease;
+	}
+
+	button:hover:not(:disabled) {
+		transform: translateY(-2px);
+		background: var(--black);
+		color: var(--white);
 	}
 
 	button.danger {
-		background: #ffb4a8;
+		border-color: var(--line-strong);
+		background: transparent;
+		color: var(--white);
 	}
 
 	button:disabled {
@@ -173,26 +215,13 @@
 
 	.error {
 		margin: 0.9rem 0 0;
-		color: #ffb4a8;
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-sm);
+		padding: 0.7rem 0.85rem;
+		background: var(--wash);
+		color: var(--white);
 		font-weight: 800;
-	}
-
-	.hand-panel {
-		grid-column: 1 / -1;
-	}
-
-	.hand-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	.hand-list span {
-		border-radius: 0.8rem;
-		padding: 0.55rem 0.7rem;
-		background: #f6f2e9;
-		color: #111816;
-		font-weight: 900;
+		text-align: center;
 	}
 
 	@media (max-width: 760px) {
