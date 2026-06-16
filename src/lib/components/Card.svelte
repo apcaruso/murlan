@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ClientCard } from '../cloudflare/rooms';
 	import { getCardDetailLabel, getCardFaceLabel, getCardLabel } from '../game/cards';
+	import CardIcon from './CardIcon.svelte';
 
 	export let card: ClientCard;
 	export let selected = false;
@@ -24,7 +25,10 @@
 	aria-pressed={selected}
 	aria-label={`Carta ${fullLabel}`}
 >
-	<span class="rank">{faceLabel}</span>
+	<span class="face">
+		<span class="rank">{faceLabel}</span>
+		<CardIcon {card} />
+	</span>
 	<span class="id">{detailLabel}</span>
 	{#if highlighted}
 		<span class="flag">{highlightLabel}</span>
@@ -48,6 +52,7 @@
 		cursor: pointer;
 		font: inherit;
 		text-align: center;
+		touch-action: manipulation;
 		transition:
 			transform 120ms ease,
 			box-shadow 120ms ease,
@@ -81,12 +86,19 @@
 		opacity: 0.64;
 	}
 
+	.face {
+		display: grid;
+		min-height: 0;
+		place-items: center;
+		gap: 0.22rem;
+		align-content: center;
+	}
+
 	.rank {
 		display: grid;
 		place-items: center;
 		width: 100%;
-		height: 100%;
-		font-size: clamp(1.25rem, 3vw, 1.75rem);
+		font-size: clamp(1.35rem, 3vw, 1.9rem);
 		font-weight: 950;
 		letter-spacing: -0.04em;
 		line-height: 1;
@@ -141,8 +153,12 @@
 			transform: translateY(-0.55rem) scale(1.02);
 		}
 
+		.face {
+			gap: 0.12rem;
+		}
+
 		.rank {
-			font-size: 1.18rem;
+			font-size: 1.28rem;
 		}
 
 		.id {

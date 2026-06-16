@@ -119,9 +119,12 @@
 		gap: clamp(0.45rem, 1.2vw, 0.7rem);
 		overflow-x: auto;
 		overflow-y: hidden;
+		overscroll-behavior-x: contain;
 		padding: 0.75rem 0.25rem 1.05rem;
 		scroll-padding-inline: 1rem;
 		scroll-snap-type: x proximity;
+		touch-action: pan-x pinch-zoom;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.cards :global(.card) {
@@ -151,6 +154,7 @@
 			gap: 0;
 			margin-inline: -0.45rem;
 			overflow-y: visible;
+			overscroll-behavior-inline: contain;
 			padding: 0.65rem 0.45rem 0.85rem;
 			scroll-snap-type: x mandatory;
 		}

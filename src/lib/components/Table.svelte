@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PublicRoomState } from '../../worker/types';
 	import { getCardShortLabel } from '../game/cards';
+	import CardIcon from './CardIcon.svelte';
 	import PlayerPanel from './PlayerPanel.svelte';
 
 	export let state: PublicRoomState;
@@ -55,7 +56,10 @@
 			<p>Ultima giocata di <strong>{playerName(state.lastPlay.playerId)}</strong></p>
 			<div class="played-cards">
 				{#each state.lastPlay.cards as card}
-					<span>{getCardShortLabel(card)}</span>
+					<span class="played-card">
+						<CardIcon {card} compact />
+						<span class="played-label">{getCardShortLabel(card)}</span>
+					</span>
 				{/each}
 			</div>
 			<small>{combinationLabel(state.lastPlay.combination.type)}</small>
@@ -137,21 +141,9 @@
 		border: 1px solid var(--line-strong);
 		border-radius: 1.6rem;
 		padding: 1rem;
-		background:
-			linear-gradient(90deg, transparent 0 49%, rgba(247, 247, 242, 0.12) 49% 50%, transparent 50% 100%),
-			linear-gradient(180deg, transparent 0 49%, rgba(247, 247, 242, 0.12) 49% 50%, transparent 50% 100%),
-			var(--wash);
+		background: var(--wash);
 		text-align: center;
 		overflow: hidden;
-	}
-
-	.center-play::before {
-		position: absolute;
-		inset: 16%;
-		border: 1px solid var(--line);
-		border-radius: 50%;
-		content: '';
-		pointer-events: none;
 	}
 
 	.center-play > * {
@@ -166,11 +158,13 @@
 		gap: 0.45rem;
 	}
 
-	.played-cards span {
-		display: inline-grid;
+	.played-card {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
 		min-width: 3.2rem;
 		min-height: 2.4rem;
-		place-items: center;
 		border: 1px solid var(--white);
 		border-radius: 0.65rem;
 		padding: 0.5rem 0.65rem;
@@ -179,6 +173,10 @@
 		font-weight: 900;
 		text-align: center;
 		text-transform: uppercase;
+	}
+
+	.played-label {
+		line-height: 1;
 	}
 
 	small,
@@ -267,15 +265,11 @@
 			gap: 0.55rem;
 		}
 
-		.center-play::before {
-			inset: 18%;
-		}
-
 		.played-cards {
 			gap: 0.35rem;
 		}
 
-		.played-cards span {
+		.played-card {
 			min-width: 2.65rem;
 			min-height: 2.1rem;
 			padding: 0.4rem 0.5rem;

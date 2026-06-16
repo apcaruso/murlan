@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import ActionBar from '../../../lib/components/ActionBar.svelte';
-	import ConnectionStatus from '../../../lib/components/ConnectionStatus.svelte';
 	import GameLog from '../../../lib/components/GameLog.svelte';
 	import Hand from '../../../lib/components/Hand.svelte';
 	import Lobby from '../../../lib/components/Lobby.svelte';
@@ -21,16 +20,12 @@
 	import { subscribeToRoom, type RoomSubscription } from '../../../lib/cloudflare/realtime';
 	import { clearRoomSession, getRoomSession } from '../../../lib/cloudflare/session';
 
-	type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
-
 	let roomId = '';
 	let inviteToken = '';
 	let hasInviteFromLink = false;
 	let playerName = '';
 	let snapshot: RoomSnapshot | null = null;
 	let hasLocalSession = false;
-	let connectionState: ConnectionState = 'idle';
-	let connectionMessage = '';
 	let isLoading = true;
 	let isJoining = false;
 	let isActing = false;
@@ -92,7 +87,6 @@
 
 	async function loadExistingSession() {
 		error = '';
-		connectionMessage = '';
 		isLoading = true;
 
 		try {
@@ -116,7 +110,6 @@
 			snapshot = response.snapshot;
 			hasLocalSession = true;
 			reconnectAttempts = 0;
-			connectionMessage = '';
 			connectRealtime();
 		} catch (caughtError) {
 			error = getPlayerErrorMessage(caughtError, 'Impossibile entrare nella stanza.');
@@ -232,8 +225,6 @@
 
 		const connectionId = activeConnectionId + 1;
 		activeConnectionId = connectionId;
-		connectionState = reconnectAttempts > 0 ? 'reconnecting' : 'connecting';
-		connectionMessage = reconnectAttempts > 0 ? `Tentativo ${reconnectAttempts + 1} di riconnessione.` : '';
 
 		try {
 			subscription = subscribeToRoom(roomId, {
@@ -241,9 +232,6 @@
 					if (connectionId !== activeConnectionId) {
 						return;
 					}
-
-					connectionState = 'connected';
-					connectionMessage = '';
 					reconnectAttempts = 0;
 				},
 				onClose: () => {
@@ -252,15 +240,7 @@
 					}
 
 					subscription = null;
-					scheduleReconnect('Connessione realtime chiusa. Riprovo automaticamente.');
-				},
-				onError: () => {
-					if (connectionId !== activeConnectionId) {
-						return;
-					}
-
-					connectionState = 'error';
-					connectionMessage = 'Errore realtime. Se la connessione si chiude, riprovo automaticamente.';
+					scheduleReconnect();
 				},
 				onMessage: (message) => {
 					if (connectionId !== activeConnectionId) {
@@ -272,8 +252,8 @@
 					}
 				}
 			});
-		} catch (caughtError) {
-			scheduleReconnect(caughtError instanceof Error ? caughtError.message : 'Connessione al tavolo non disponibile.');
+		} catch {
+			scheduleReconnect();
 		}
 	}
 
@@ -282,8 +262,6 @@
 		activeConnectionId += 1;
 		clearReconnectTimer();
 		closeSubscription();
-		connectionState = snapshot ? 'disconnected' : 'idle';
-		connectionMessage = '';
 	}
 
 	function closeSubscription() {
@@ -291,16 +269,12 @@
 		subscription = null;
 	}
 
-	function scheduleReconnect(message: string) {
+	function scheduleReconnect() {
 		if (!realtimeEnabled || !hasLocalSession) {
-			connectionState = 'disconnected';
-			connectionMessage = message;
 			return;
 		}
 
-		connectionState = 'reconnecting';
 		const delay = Math.min(1000 * 2 ** reconnectAttempts, 10000);
-		connectionMessage = `${message} Prossimo tentativo tra ${Math.ceil(delay / 1000)}s.`;
 		reconnectAttempts += 1;
 		clearReconnectTimer();
 		reconnectTimer = setTimeout(() => {
@@ -323,7 +297,7 @@
 				return;
 			}
 
-			scheduleReconnect(caughtError instanceof Error ? caughtError.message : 'Riconnessione non riuscita.');
+			scheduleReconnect();
 		}
 	}
 
@@ -342,8 +316,6 @@
 
 		error = getPlayerErrorMessage(caughtError, 'Non riesco a farti rientrare in questa stanza.');
 		hasLocalSession = false;
-		connectionState = 'error';
-		connectionMessage = 'Non riesco a recuperare lo stato stanza. Puoi riprovare ricaricando la pagina.';
 	}
 
 	function handleInvalidLocalSession(message: string) {
@@ -352,8 +324,6 @@
 		snapshot = null;
 		hasLocalSession = false;
 		error = `${message} Rientra con il link invito.`;
-		connectionState = 'idle';
-		connectionMessage = 'Rientro automatico disattivato.';
 	}
 
 	function isSessionError(error: unknown): error is ApiRequestError {
@@ -423,7 +393,6 @@
 	{#if !snapshot || isLobbyPhase}
 		<header class="topbar">
 			<a href="/" class="home-link">Murlan</a>
-			<ConnectionStatus state={connectionState} detail={connectionMessage} />
 		</header>
 	{/if}
 
@@ -456,7 +425,6 @@
 					<strong>{controllerPlayer?.name ?? 'nessuno'}</strong>
 				</div>
 
-				<ConnectionStatus state={connectionState} detail={connectionMessage} />
 			</header>
 
 			<section class="arena-card" aria-label="Tavolo di gioco">
@@ -707,7 +675,7 @@
 	.game-hud {
 		grid-column: 1 / -1;
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 0.75rem;
 		align-items: stretch;
 	}
@@ -859,7 +827,7 @@
 		}
 
 		.game-hud {
-			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-columns: 1fr;
 			gap: 0.45rem;
 			order: 1;
 		}
@@ -870,21 +838,6 @@
 
 		.game-hud > .turn-block {
 			grid-column: 1 / -1;
-		}
-
-		.game-hud > .hud-block:nth-of-type(3) {
-			grid-column: 1;
-		}
-
-		.game-hud :global(.connection) {
-			grid-column: 2;
-			align-self: stretch;
-			min-width: 4.9rem;
-			padding-inline: 0.55rem;
-		}
-
-		.game-hud :global(.connection small) {
-			display: none;
 		}
 
 		.hud-block {

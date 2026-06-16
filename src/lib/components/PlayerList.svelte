@@ -22,7 +22,6 @@
 				<div class="badges" aria-label={`Stato ${player.name}`}>
 					{#if player.isHost}<span class="host">capo tavolo</span>{/if}
 					<span class:ready={player.ready}>{player.ready ? 'pronto' : 'non pronto'}</span>
-					<span class:connected={player.connected}>{player.connected ? 'online' : 'offline'}</span>
 				</div>
 			</li>
 		{/each}
@@ -115,8 +114,7 @@
 	}
 
 	.badges span.host,
-	.badges span.ready,
-	.badges span.connected {
+	.badges span.ready {
 		border-color: var(--white);
 		background: var(--white);
 		color: var(--black);

@@ -42,7 +42,7 @@
 		<form class="create-card" on:submit|preventDefault={handleCreateRoom}>
 			<label>
 				Nome giocatore
-				<input bind:value={name} name="name" required maxlength="32" placeholder="Alessandro" />
+				<input bind:value={name} name="name" required maxlength="32" placeholder="Giocatore" />
 			</label>
 
 			<label>

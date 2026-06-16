@@ -20,7 +20,6 @@
 		{#if isCurrent}<span class="turn">turno</span>{/if}
 		{#if isController}<span class="control">controllo</span>{/if}
 		{#if hasPassed}<span>pass</span>{/if}
-		<span class:connected={player.connected}>{player.connected ? 'online' : 'offline'}</span>
 	</div>
 </article>
 
@@ -81,8 +80,7 @@
 	}
 
 	.badges .turn,
-	.badges .control,
-	.badges .connected {
+	.badges .control {
 		border-color: var(--white);
 		background: var(--white);
 		color: var(--black);
