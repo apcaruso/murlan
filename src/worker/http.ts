@@ -12,20 +12,13 @@ export class ApiError extends Error {
 
 export type JsonObject = Record<string, unknown>;
 
-export const corsHeaders = {
-	'Access-Control-Allow-Origin': '*',
-	'Access-Control-Allow-Headers': 'content-type',
-	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-};
-
 export function json(data: unknown, init: ResponseInit = {}): Response {
+	const headers = new Headers(init.headers);
+	headers.set('Content-Type', 'application/json');
+
 	return new Response(JSON.stringify(data), {
 		...init,
-		headers: {
-			...corsHeaders,
-			...Object.fromEntries(new Headers(init.headers).entries()),
-			'Content-Type': 'application/json'
-		}
+		headers
 	});
 }
 
@@ -179,10 +172,6 @@ export function getStringArray(input: JsonObject, key: string): string[] {
 }
 
 export function assertMethod(req: Request, methods: readonly string[]): void {
-	if (req.method === 'OPTIONS') {
-		return;
-	}
-
 	if (!methods.includes(req.method)) {
 		throw new ApiError(405, 'method_not_allowed', 'Method not allowed.');
 	}

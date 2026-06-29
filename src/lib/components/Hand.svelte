@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ClientCard } from '../cloudflare/rooms';
+	import { sortCards } from '../game/cards';
 	import CardComponent from './Card.svelte';
 
 	export let cards: ClientCard[] = [];
@@ -8,46 +9,9 @@
 	export let highlightedCardIds: string[] = [];
 	export let onToggleCard: (cardId: string) => void = () => {};
 
-	const rankValues: Record<string, number> = {
-		'3': 3,
-		'4': 4,
-		'5': 5,
-		'6': 6,
-		'7': 7,
-		'8': 8,
-		'9': 9,
-		'10': 10,
-		J: 11,
-		Q: 12,
-		K: 13,
-		A: 14,
-		'2': 15,
-		black_joker: 16,
-		red_joker: 17
-	};
-	const suitValues: Record<string, number> = {
-		clubs: 0,
-		diamonds: 1,
-		hearts: 2,
-		spades: 3
-	};
-
-	$: sortedCards = [...cards].sort(compareCards);
+	$: sortedCards = sortCards(cards);
 	$: selected = new Set(selectedCardIds);
 	$: highlighted = new Set(highlightedCardIds);
-
-	function compareCards(left: ClientCard, right: ClientCard): number {
-		const rankDifference = rankValues[left.rank] - rankValues[right.rank];
-
-		if (rankDifference !== 0) {
-			return rankDifference;
-		}
-
-		const leftSuit = 'suit' in left && left.suit ? suitValues[left.suit] : 0;
-		const rightSuit = 'suit' in right && right.suit ? suitValues[right.suit] : 0;
-
-		return leftSuit - rightSuit;
-	}
 </script>
 
 <section class="hand" aria-label="La tua mano">

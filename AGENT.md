@@ -47,7 +47,7 @@ Stato autorevole:
   Durable Object storage
 
 Frontend previsto:
-  SvelteKit o frontend statico servito accanto al Worker
+  Svelte/Vite frontend statico servito accanto al Worker
 
 Linguaggio:
   TypeScript
@@ -122,12 +122,11 @@ src/lib/components/
   PlayerPanel.svelte
   Scoreboard.svelte
   ActionBar.svelte
-  ConnectionStatus.svelte
   GameLog.svelte
 
-src/routes/
-  +page.svelte
-  room/[roomId]/+page.svelte
+src/
+  Home.svelte
+  Room.svelte
 
 wrangler.jsonc
 tsconfig.json
@@ -163,10 +162,10 @@ Implementato:
 * test manuali partita via API
 * route home/stanza collegate ai wrapper Cloudflare a livello sorgente
 * bootstrap UI stanza con sessione locale, state fetch e WebSocket
-* toolchain frontend SvelteKit/Vite
+* toolchain frontend Svelte/Vite
 * build statica frontend
 * serving frontend da Wrangler assets con Worker first su `/api/*`
-* Lobby UI reale con componenti `Lobby`, `InviteLink`, `PlayerList`, `ConnectionStatus`
+* Lobby UI reale con componenti `Lobby`, `InviteLink`, `PlayerList`
 * Game UI reale con componenti `Card`, `Hand`, `Table`, `PlayerPanel`, `Scoreboard`, `ActionBar`, `GameLog`
 * azioni frontend `playCards` e `passTurn` con selezione multipla carte
 * Reconnect UX con sessione locale persistente, auto-reconnect WebSocket e rejoin su sessione invalida
@@ -559,8 +558,8 @@ Prossimo step consigliato: Step 4 - Collegare frontend.
 File:
 
 ```txt
-src/routes/+page.svelte
-src/routes/room/[roomId]/+page.svelte
+src/Home.svelte
+src/Room.svelte
 src/lib/cloudflare/rooms.ts
 src/lib/cloudflare/realtime.ts
 src/lib/cloudflare/session.ts
@@ -585,7 +584,7 @@ Stato: completato il 2026-06-13.
 
 Comandi eseguiti:
 
-* `npm install -D svelte @sveltejs/kit @sveltejs/adapter-static vite svelte-check`
+* `npm install -D svelte @sveltejs/vite-plugin-svelte vite svelte-check`
 * `npm run check`
 * `npm run build`
 * `npm run dev -- --port 8787`
@@ -600,7 +599,7 @@ Comandi eseguiti:
 Test passati:
 
 * `npm run check` passa con `svelte-check` e `tsc` Worker
-* `npm run build` genera `build/` con `@sveltejs/adapter-static`
+* `npm run build` genera `build/` con Vite
 * `/` su `wrangler dev` risponde `200 text/html`
 * `/room/TESTROOM` su `wrangler dev` risponde `200 text/html`
 * `GET /api/health` risponde `200 {"ok":true}` con assets attivi
@@ -620,7 +619,7 @@ Test falliti o non verificabili:
 
 Bug trovati:
 
-* risolto: mancava la toolchain frontend SvelteKit/static assets
+* risolto: mancava la toolchain frontend Svelte/Vite static assets
 * risolto: il Worker serviva solo API e non serviva ancora il frontend
 * nota: `npm install` segnala vulnerabilita su dipendenze dev; `npm audit --omit=dev` non trova vulnerabilita production
 
@@ -636,7 +635,6 @@ Componenti:
 Lobby.svelte
 InviteLink.svelte
 PlayerList.svelte
-ConnectionStatus.svelte
 ```
 
 Acceptance criteria:

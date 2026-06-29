@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
-	import ActionBar from '../../../lib/components/ActionBar.svelte';
-	import GameLog from '../../../lib/components/GameLog.svelte';
-	import Hand from '../../../lib/components/Hand.svelte';
-	import Lobby from '../../../lib/components/Lobby.svelte';
-	import Scoreboard from '../../../lib/components/Scoreboard.svelte';
-	import Table from '../../../lib/components/Table.svelte';
+	import ActionBar from './lib/components/ActionBar.svelte';
+	import GameLog from './lib/components/GameLog.svelte';
+	import Hand from './lib/components/Hand.svelte';
+	import Lobby from './lib/components/Lobby.svelte';
+	import Scoreboard from './lib/components/Scoreboard.svelte';
+	import Table from './lib/components/Table.svelte';
 	import {
 		ApiRequestError,
 		getRoomState,
@@ -16,9 +16,9 @@
 		setReady,
 		startGame,
 		type RoomSnapshot
-	} from '../../../lib/cloudflare/rooms';
-	import { subscribeToRoom, type RoomSubscription } from '../../../lib/cloudflare/realtime';
-	import { clearRoomSession, getRoomSession } from '../../../lib/cloudflare/session';
+	} from './lib/cloudflare/rooms';
+	import { subscribeToRoom, type RoomSubscription } from './lib/cloudflare/realtime';
+	import { clearRoomSession, getRoomSession } from './lib/cloudflare/session';
 
 	let roomId = '';
 	let inviteToken = '';

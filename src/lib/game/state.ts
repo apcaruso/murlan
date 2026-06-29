@@ -2,16 +2,7 @@ import { DEFAULT_TARGET_SCORE } from './scoring';
 import type { Card } from './cards';
 import type { Combination } from './rules';
 
-export const GAME_PHASES = [
-	'waiting',
-	'ready',
-	'playing',
-	'hand_finished',
-	'game_finished',
-	'closed'
-] as const;
-
-export type GamePhase = (typeof GAME_PHASES)[number];
+export type GamePhase = 'waiting' | 'ready' | 'playing' | 'hand_finished' | 'game_finished' | 'closed';
 export type PlayerId = string;
 
 export type PlayerState = {
@@ -65,20 +56,8 @@ export function createGameState(input: CreateGameStateInput = {}): GameState {
 	};
 }
 
-export function isGamePhase(phase: string): phase is GamePhase {
-	return GAME_PHASES.includes(phase as GamePhase);
-}
-
 export function getPlayer(state: GameState, playerId: PlayerId): PlayerState | undefined {
 	return state.players.find((player) => player.id === playerId);
-}
-
-export function getCurrentPlayer(state: GameState): PlayerState | null {
-	return state.currentPlayerId ? getPlayer(state, state.currentPlayerId) ?? null : null;
-}
-
-export function getControllerPlayer(state: GameState): PlayerState | null {
-	return state.controllerPlayerId ? getPlayer(state, state.controllerPlayerId) ?? null : null;
 }
 
 export function getPlayersInSeatOrder(state: GameState): PlayerState[] {
@@ -134,32 +113,6 @@ export function getNextPlayerId(
 	return (
 		activePlayers.find((player) => player.seatIndex > fromPlayer.seatIndex) ?? activePlayers[0]
 	).id;
-}
-
-export function isCurrentPlayer(state: GameState, playerId: PlayerId): boolean {
-	return state.currentPlayerId === playerId;
-}
-
-export function hasPassed(state: GameState, playerId: PlayerId): boolean {
-	return state.passedPlayerIds.includes(playerId);
-}
-
-export function getPassedPlayers(state: GameState): PlayerState[] {
-	return getPlayersInSeatOrder(state).filter((player) => hasPassed(state, player.id));
-}
-
-export function getRemainingPlayerWithCards(state: GameState): PlayerState | null {
-	const playersWithCards = getPlayersWithCards(state);
-
-	return playersWithCards.length === 1 ? playersWithCards[0] : null;
-}
-
-export function isHandFinished(state: GameState): boolean {
-	if (state.phase === 'hand_finished' || state.phase === 'game_finished') {
-		return true;
-	}
-
-	return state.phase === 'playing' && getPlayersWithCards(state).length <= 1;
 }
 
 function clonePlayerState(player: PlayerState): PlayerState {

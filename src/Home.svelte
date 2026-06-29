@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createRoom } from '../lib/cloudflare/rooms';
+	import { createRoom } from './lib/cloudflare/rooms';
 
 	let name = '';
 	let maxPlayers = 5;

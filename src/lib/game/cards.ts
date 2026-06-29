@@ -113,7 +113,7 @@ export function compareCardsAscending(a: Card, b: Card): number {
 	return SUIT_VALUES[a.suit] - SUIT_VALUES[b.suit];
 }
 
-export function sortCards(cards: readonly Card[]): Card[] {
+export function sortCards<T extends Card>(cards: readonly T[]): T[] {
 	return [...cards].sort(compareCardsAscending);
 }
 

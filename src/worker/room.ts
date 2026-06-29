@@ -1,20 +1,17 @@
 import { passTurn as applyPassTurn, playCards as applyPlayCards, startHand, startNextHand } from '../lib/game/actions';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../lib/game/deck';
-import { detectCombination } from '../lib/game/rules';
 import {
 	createGameState,
 	getPlayer,
 	getPlayersInSeatOrder
 } from '../lib/game/state';
-import type { Card } from '../lib/game/cards';
 import type { Combination } from '../lib/game/rules';
 import type { GamePhase, GameState, PlayerState } from '../lib/game/state';
-import { getCardId, selectCardsByIds, toClientCards } from './card-ids';
+import { selectCardsByIds, toClientCards } from './card-ids';
 import { generateSecret } from './random';
 import {
 	ApiError,
 	assertMethod,
-	corsHeaders,
 	errorResponse,
 	getBoolean,
 	getOptionalInteger,
@@ -53,10 +50,6 @@ export class RoomDurableObject implements DurableObject {
 	) {}
 
 	async fetch(req: Request): Promise<Response> {
-		if (req.method === 'OPTIONS') {
-			return new Response(null, { headers: corsHeaders });
-		}
-
 		try {
 			const action = new URL(req.url).pathname.replace(/^\/+/, '') || 'state';
 
@@ -108,16 +101,11 @@ export class RoomDurableObject implements DurableObject {
 		const session = createPlayerSession();
 		const hostPlayer: StoredPlayer = {
 			...session,
-			name,
-			seatIndex: 0,
-			connected: true,
-			ready: false,
-			score: 0,
 			joinedAt: now
 		};
 		const gameState = createGameState({
 			phase: 'waiting',
-			players: [toPlayerState(hostPlayer)]
+			players: [createPlayerState(hostPlayer.playerId, name, 0)]
 		});
 		let room: StoredRoom = {
 			id,
@@ -125,7 +113,6 @@ export class RoomDurableObject implements DurableObject {
 			inviteToken: generateSecret(),
 			hostPlayerId: hostPlayer.playerId,
 			maxPlayers,
-			phase: 'waiting',
 			players: [hostPlayer],
 			gameState,
 			events: [],
@@ -134,11 +121,7 @@ export class RoomDurableObject implements DurableObject {
 			updatedAt: now
 		};
 
-		room = addEvent(room, 'player_joined', {
-			playerId: hostPlayer.playerId,
-			name,
-			seatIndex: 0
-		});
+		room = addEvent(room, 'player_joined');
 		await this.saveRoom(room);
 
 		const snapshot = toSnapshot(room, hostPlayer.playerId, siteOrigin);
@@ -167,20 +150,18 @@ export class RoomDurableObject implements DurableObject {
 
 		if (existingPlayer) {
 			assertPlayerSecret(existingPlayer, maybeSession?.playerSecret);
-			existingPlayer.name = name;
-			existingPlayer.connected = true;
-			room = syncPlayerIntoState(room, existingPlayer);
-			room = addEvent(room, 'player_rejoined', {
-				playerId: existingPlayer.playerId,
-				name
-			});
+			room = updatePlayerState(room, existingPlayer.playerId, { name, connected: true });
+			room = addEvent(room, 'player_rejoined');
 			await this.saveRoom(room);
 			await this.broadcast(room, 'player_rejoined');
 
 			return json({
 				roomId: room.id,
 				code: room.code,
-				session: toSession(existingPlayer),
+				session: {
+					playerId: existingPlayer.playerId,
+					playerSecret: existingPlayer.playerSecret
+				},
 				snapshot: toSnapshot(room, existingPlayer.playerId, this.getSiteOrigin(req))
 			} satisfies JoinRoomResponse);
 		}
@@ -191,7 +172,7 @@ export class RoomDurableObject implements DurableObject {
 			throw new ApiError(404, 'invalid_invite', 'Invalid room invite.');
 		}
 
-		if (room.phase !== 'waiting' && room.phase !== 'ready') {
+		if (!isLobbyPhase(room.gameState.phase)) {
 			throw new ApiError(409, 'room_not_joinable', 'Room is not accepting new players.');
 		}
 
@@ -200,23 +181,22 @@ export class RoomDurableObject implements DurableObject {
 		}
 
 		const session = createPlayerSession();
+		const seatIndex = nextSeatIndex(room);
 		const player: StoredPlayer = {
 			...session,
-			name,
-			seatIndex: nextSeatIndex(room),
-			connected: true,
-			ready: false,
-			score: 0,
 			joinedAt: new Date().toISOString()
 		};
 
-		room.players.push(player);
+		room = {
+			...room,
+			players: [...room.players, player],
+			gameState: createGameState({
+				...room.gameState,
+				players: [...room.gameState.players, createPlayerState(player.playerId, name, seatIndex)]
+			})
+		};
 		room = syncLobbyState(room);
-		room = addEvent(room, 'player_joined', {
-			playerId: player.playerId,
-			name,
-			seatIndex: player.seatIndex
-		});
+		room = addEvent(room, 'player_joined');
 		await this.saveRoom(room);
 		await this.broadcast(room, 'player_joined');
 
@@ -236,17 +216,13 @@ export class RoomDurableObject implements DurableObject {
 		const player = authenticate(room, input);
 		const ready = getBoolean(input, 'ready');
 
-		if (room.phase !== 'waiting' && room.phase !== 'ready') {
+		if (!isLobbyPhase(room.gameState.phase)) {
 			throw new ApiError(409, 'room_not_waiting', 'Ready state can only change in lobby.');
 		}
 
-		player.ready = ready;
+		room = updatePlayerState(room, player.playerId, { ready });
 		room = syncLobbyState(room);
-		room = addEvent(room, 'ready_changed', {
-			playerId: player.playerId,
-			ready,
-			phase: room.phase
-		});
+		room = addEvent(room, 'ready_changed');
 		await this.saveRoom(room);
 		await this.broadcast(room, 'ready_changed');
 
@@ -264,26 +240,13 @@ export class RoomDurableObject implements DurableObject {
 			throw new ApiError(403, 'host_required', 'Only the room host can start the game.');
 		}
 
-		if (room.phase === 'waiting' || room.phase === 'ready') {
+		if (isLobbyPhase(room.gameState.phase)) {
 			assertReadyToStart(room);
-			const state = createGameState({
-				...room.gameState,
-				players: room.players.map(toPlayerState),
-				phase: room.phase
-			});
-			room = applyStateToRoom(room, startHand(state));
-			room = addEvent(room, 'game_started', {
-				startedBy: player.playerId,
-				handNumber: room.gameState.handNumber,
-				currentPlayerId: room.gameState.currentPlayerId
-			});
-		} else if (room.phase === 'hand_finished') {
+			room = applyStateToRoom(room, startHand(room.gameState));
+			room = addEvent(room, 'game_started');
+		} else if (room.gameState.phase === 'hand_finished') {
 			room = applyStateToRoom(room, startNextHand(room.gameState));
-			room = addEvent(room, 'hand_started', {
-				startedBy: player.playerId,
-				handNumber: room.gameState.handNumber,
-				currentPlayerId: room.gameState.currentPlayerId
-			});
+			room = addEvent(room, 'hand_started');
 		} else {
 			throw new ApiError(409, 'room_not_startable', 'Room cannot be started in its current phase.');
 		}
@@ -308,43 +271,24 @@ export class RoomDurableObject implements DurableObject {
 		}
 
 		const cards = selectCardsByIds(playerState.hand, cardIds);
-		const combination = detectCombination(cards);
 		const previousFinishOrder = [...room.gameState.finishOrder];
 		const nextState = applyPlayCards(room.gameState, player.playerId, cards);
 		const playerJustFinished =
 			!previousFinishOrder.includes(player.playerId) && nextState.finishOrder.includes(player.playerId);
 
 		room = applyStateToRoom(room, nextState);
-		room = addEvent(room, 'play_accepted', {
-			playerId: player.playerId,
-			cardIds,
-			cards: cards.map(serializeCard),
-			combination,
-			nextPlayerId: nextState.currentPlayerId
-		});
+		room = addEvent(room, 'play_accepted');
 
 		if (playerJustFinished) {
-			room = addEvent(room, 'player_finished', {
-				playerId: player.playerId,
-				position: nextState.finishOrder.indexOf(player.playerId) + 1
-			});
+			room = addEvent(room, 'player_finished');
 		}
 
 		if (nextState.phase === 'hand_finished') {
-			room = addEvent(room, 'hand_finished', {
-				finishOrder: nextState.finishOrder,
-				scores: getScores(nextState)
-			});
+			room = addEvent(room, 'hand_finished');
 		}
 
 		if (nextState.phase === 'game_finished') {
-			room = addEvent(room, 'game_finished', {
-				finishOrder: nextState.finishOrder,
-				scores: getScores(nextState),
-				winners: nextState.players
-					.filter((statePlayer) => statePlayer.score >= nextState.targetScore)
-					.map((statePlayer) => statePlayer.id)
-			});
+			room = addEvent(room, 'game_finished');
 		}
 
 		await this.saveRoom(room);
@@ -363,17 +307,10 @@ export class RoomDurableObject implements DurableObject {
 		const trickWasReset = room.gameState.lastPlay !== null && nextState.lastPlay === null;
 
 		room = applyStateToRoom(room, nextState);
-		room = addEvent(room, 'player_passed', {
-			playerId: player.playerId,
-			nextPlayerId: nextState.currentPlayerId,
-			trickReset: trickWasReset
-		});
+		room = addEvent(room, 'player_passed');
 
 		if (trickWasReset) {
-			room = addEvent(room, 'turn_changed', {
-				currentPlayerId: nextState.currentPlayerId,
-				controllerPlayerId: nextState.controllerPlayerId
-			});
+			room = addEvent(room, 'turn_changed');
 		}
 
 		await this.saveRoom(room);
@@ -389,38 +326,40 @@ export class RoomDurableObject implements DurableObject {
 		const input = await parseJsonBody(req);
 		const player = authenticate(room, input);
 
-		if (room.phase === 'waiting' || room.phase === 'ready') {
-			room.players = room.players.filter((roomPlayer) => roomPlayer.playerId !== player.playerId);
-			room = addEvent(room, 'player_left', {
-				playerId: player.playerId,
-				name: player.name
-			});
+		if (isLobbyPhase(room.gameState.phase)) {
+			room = {
+				...room,
+				players: room.players.filter((roomPlayer) => roomPlayer.playerId !== player.playerId),
+				gameState: createGameState({
+					...room.gameState,
+					players: room.gameState.players.filter((statePlayer) => statePlayer.id !== player.playerId)
+				})
+			};
+			room = addEvent(room, 'player_left');
 
 			if (room.players.length === 0) {
-				room.phase = 'closed';
-				room.gameState = createGameState({ phase: 'closed' });
-				room = addEvent(room, 'room_closed', { reason: 'empty_room' });
+				room = {
+					...room,
+					gameState: createGameState({ phase: 'closed' })
+				};
+				room = addEvent(room, 'room_closed');
 			} else {
 				if (room.hostPlayerId === player.playerId) {
-					room.hostPlayerId = room.players[0].playerId;
-					room = addEvent(room, 'host_changed', { hostPlayerId: room.hostPlayerId });
+					room = { ...room, hostPlayerId: room.players[0].playerId };
+					room = addEvent(room, 'host_changed');
 				}
 
 				room = syncLobbyState(room);
 			}
 		} else {
-			player.connected = false;
-			room = syncPlayerIntoState(room, player);
-			room = addEvent(room, 'player_left', {
-				playerId: player.playerId,
-				name: player.name
-			});
+			room = updatePlayerState(room, player.playerId, { connected: false });
+			room = addEvent(room, 'player_left');
 		}
 
 		await this.saveRoom(room);
 		await this.broadcast(room, 'player_left');
 
-		return json({ left: true, roomClosed: room.phase === 'closed' });
+		return json({ left: true, roomClosed: room.gameState.phase === 'closed' });
 	}
 
 	private async getRoomState(req: Request): Promise<Response> {
@@ -442,8 +381,7 @@ export class RoomDurableObject implements DurableObject {
 
 		let room = await this.requireRoom();
 		const player = authenticate(room, queryInput(req));
-		player.connected = true;
-		room = syncPlayerIntoState(room, player);
+		room = updatePlayerState(room, player.playerId, { connected: true });
 		await this.saveRoom(room);
 
 		const pair = new WebSocketPair();
@@ -483,18 +421,15 @@ export class RoomDurableObject implements DurableObject {
 
 		let room = await this.loadRoom();
 
-		if (!room || room.phase === 'closed') {
+		if (!room || room.gameState.phase === 'closed') {
 			return;
 		}
 
-		const player = room.players.find((roomPlayer) => roomPlayer.playerId === playerId);
-
-		if (!player) {
+		if (!room.players.some((roomPlayer) => roomPlayer.playerId === playerId)) {
 			return;
 		}
 
-		player.connected = false;
-		room = syncPlayerIntoState(room, player);
+		room = updatePlayerState(room, playerId, { connected: false });
 		await this.saveRoom(room);
 		await this.broadcast(room, 'player_disconnected');
 	}
@@ -545,10 +480,16 @@ function createPlayerSession(): PlayerSession {
 	};
 }
 
-function toSession(player: StoredPlayer): PlayerSession {
+function createPlayerState(id: string, name: string, seatIndex: number): PlayerState {
 	return {
-		playerId: player.playerId,
-		playerSecret: player.playerSecret
+		id,
+		name,
+		seatIndex,
+		hand: [],
+		score: 0,
+		connected: true,
+		ready: false,
+		finishedPosition: null
 	};
 }
 
@@ -588,17 +529,17 @@ function assertPlayerSecret(player: StoredPlayer, playerSecret: string | null | 
 }
 
 function assertReadyToStart(room: StoredRoom): void {
-	if (room.players.length < MIN_PLAYERS) {
+	const players = room.gameState.players;
+
+	if (players.length < MIN_PLAYERS) {
 		throw new ApiError(409, 'not_enough_players', `At least ${MIN_PLAYERS} players are required.`);
 	}
 
-	if (room.players.length > MAX_PLAYERS) {
+	if (players.length > MAX_PLAYERS) {
 		throw new ApiError(409, 'too_many_players', `At most ${MAX_PLAYERS} players are allowed.`);
 	}
 
-	const notReadyPlayers = room.players.filter(
-		(player) => player.playerId !== room.hostPlayerId && !player.ready
-	);
+	const notReadyPlayers = players.filter((player) => player.id !== room.hostPlayerId && !player.ready);
 
 	if (notReadyPlayers.length > 0) {
 		throw new ApiError(409, 'players_not_ready', 'All non-host players must be ready.');
@@ -606,7 +547,7 @@ function assertReadyToStart(room: StoredRoom): void {
 }
 
 function nextSeatIndex(room: StoredRoom): number {
-	const occupiedSeats = new Set(room.players.map((player) => player.seatIndex));
+	const occupiedSeats = new Set(room.gameState.players.map((player) => player.seatIndex));
 
 	for (let seatIndex = 0; seatIndex < room.maxPlayers; seatIndex += 1) {
 		if (!occupiedSeats.has(seatIndex)) {
@@ -618,13 +559,13 @@ function nextSeatIndex(room: StoredRoom): number {
 }
 
 function syncLobbyState(room: StoredRoom): StoredRoom {
-	if (room.phase === 'closed') {
+	if (room.gameState.phase === 'closed') {
 		return room;
 	}
 
-	const nonHostPlayers = room.players.filter((player) => player.playerId !== room.hostPlayerId);
+	const nonHostPlayers = room.gameState.players.filter((player) => player.id !== room.hostPlayerId);
 	const phase: GamePhase =
-		room.players.length >= MIN_PLAYERS &&
+		room.gameState.players.length >= MIN_PLAYERS &&
 		nonHostPlayers.length > 0 &&
 		nonHostPlayers.every((player) => player.ready)
 			? 'ready'
@@ -632,7 +573,6 @@ function syncLobbyState(room: StoredRoom): StoredRoom {
 
 	return {
 		...room,
-		phase,
 		gameState: createGameState({
 			...room.gameState,
 			phase,
@@ -640,76 +580,38 @@ function syncLobbyState(room: StoredRoom): StoredRoom {
 			controllerPlayerId: null,
 			lastPlay: null,
 			passedPlayerIds: [],
-			finishOrder: [],
-			players: room.players.map(toPlayerState)
+			finishOrder: []
 		})
 	};
 }
 
-function syncPlayerIntoState(room: StoredRoom, player: StoredPlayer): StoredRoom {
-	const gameState = createGameState({
-		...room.gameState,
-		players: room.gameState.players.map((statePlayer) =>
-			statePlayer.id === player.playerId
-				? {
-						...statePlayer,
-						name: player.name,
-						connected: player.connected,
-						ready: player.ready,
-						score: player.score
-					}
-				: statePlayer
-		)
-	});
-
-	return { ...room, gameState };
+function updatePlayerState(
+	room: StoredRoom,
+	playerId: string,
+	patch: Partial<Pick<PlayerState, 'name' | 'connected' | 'ready' | 'score'>>
+): StoredRoom {
+	return {
+		...room,
+		gameState: createGameState({
+			...room.gameState,
+			players: room.gameState.players.map((player) =>
+				player.id === playerId ? { ...player, ...patch } : player
+			)
+		})
+	};
 }
 
 function applyStateToRoom(room: StoredRoom, gameState: GameState): StoredRoom {
-	const players = room.players.map((player) => {
-		const statePlayer = getPlayer(gameState, player.playerId);
-
-		return statePlayer
-			? {
-					...player,
-					name: statePlayer.name,
-					connected: statePlayer.connected,
-					ready: statePlayer.ready,
-					score: statePlayer.score
-				}
-			: player;
-	});
-
 	return {
 		...room,
-		phase: gameState.phase,
-		players,
 		gameState: createGameState(gameState)
 	};
 }
 
-function toPlayerState(player: StoredPlayer): PlayerState {
-	return {
-		id: player.playerId,
-		name: player.name,
-		seatIndex: player.seatIndex,
-		hand: [],
-		score: player.score,
-		connected: player.connected,
-		ready: player.ready,
-		finishedPosition: null
-	};
-}
-
-function addEvent(
-	room: StoredRoom,
-	type: string,
-	payload: Record<string, unknown> = {}
-): StoredRoom {
+function addEvent(room: StoredRoom, type: string): StoredRoom {
 	const event: RoomEvent = {
 		id: room.nextEventId,
 		type,
-		payload,
 		createdAt: new Date().toISOString()
 	};
 
@@ -785,12 +687,6 @@ function buildInviteUrl(room: StoredRoom, siteOrigin?: string): string {
 	return `${origin}/room/${encodeURIComponent(room.code)}?invite=${encodeURIComponent(room.inviteToken)}`;
 }
 
-function getScores(state: GameState): Record<string, number> {
-	return Object.fromEntries(state.players.map((player) => [player.id, player.score]));
-}
-
-function serializeCard(card: Card): Record<string, string> {
-	return 'suit' in card && card.suit
-		? { id: getCardId(card), rank: card.rank, suit: card.suit }
-		: { id: getCardId(card), rank: card.rank };
+function isLobbyPhase(phase: GamePhase): boolean {
+	return phase === 'waiting' || phase === 'ready';
 }

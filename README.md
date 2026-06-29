@@ -12,12 +12,12 @@ The client only sends player intentions. A Cloudflare Durable Object owns the ro
 - Server-side validation for joins, ready state, game start, plays, passes, and leaving
 - Support for 2 to 5 players per room
 - Durable Object storage for authoritative room state
-- Static SvelteKit frontend served by the Worker assets pipeline
+- Static Svelte frontend served by the Worker assets pipeline
 
 ## Tech Stack
 
 - TypeScript
-- SvelteKit
+- Svelte
 - Vite
 - Cloudflare Workers
 - Cloudflare Durable Objects
@@ -29,7 +29,8 @@ The client only sends player intentions. A Cloudflare Durable Object owns the ro
 src/lib/game/          Core card, deck, rule, scoring, and game state logic
 src/lib/cloudflare/    Browser-side API, session, and realtime helpers
 src/lib/components/    Svelte UI components
-src/routes/            SvelteKit pages
+src/Home.svelte        Landing page
+src/Room.svelte        Room page
 src/worker/            Cloudflare Worker and Durable Object backend
 wrangler.jsonc         Cloudflare Worker configuration
 ```
@@ -87,7 +88,7 @@ Starts the Worker with Wrangler.
 npm run build
 ```
 
-Builds the SvelteKit frontend.
+Builds the Svelte frontend.
 
 ```sh
 npm run check
@@ -144,6 +145,6 @@ Wrangler will build the Worker, upload the static assets from `build`, and apply
 
 ## Notes
 
-- `node_modules/`, `build/`, `.svelte-kit/`, `.wrangler/`, `.env`, `.dev.vars`, and `.DS_Store` are ignored.
+- `node_modules/`, `build/`, `.wrangler/`, `.env`, `.dev.vars`, and `.DS_Store` are ignored.
 - Room invite tokens and player session secrets are generated at runtime and are not stored in the repository.
 - The package is marked as `private` because this project is an application, not an npm library.

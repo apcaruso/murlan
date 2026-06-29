@@ -4,7 +4,6 @@ import type { Card } from './cards';
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 5;
 
-export type ShuffleSeed = string | number;
 export type DeckPlayer = string | { id: string };
 export type DealtPlayer<TPlayer extends DeckPlayer = DeckPlayer> = TPlayer extends string
 	? { id: TPlayer; hand: Card[] }
@@ -19,12 +18,11 @@ export function createDeck(): Card[] {
 	return [...standardCards, ...jokers];
 }
 
-export function shuffleDeck(deck: readonly Card[], seed?: ShuffleSeed): Card[] {
+export function shuffleDeck(deck: readonly Card[]): Card[] {
 	const shuffled = [...deck];
-	const random = seed === undefined ? randomUnit : createSeededRandom(seed);
 
 	for (let index = shuffled.length - 1; index > 0; index -= 1) {
-		const swapIndex = Math.floor(random() * (index + 1));
+		const swapIndex = Math.floor(randomUnit() * (index + 1));
 		[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
 	}
 
@@ -74,27 +72,4 @@ function randomUnit(): number {
 	}
 
 	return Math.random();
-}
-
-function createSeededRandom(seed: ShuffleSeed): () => number {
-	let state = typeof seed === 'number' ? seed >>> 0 : hashSeed(seed);
-
-	return () => {
-		state = (state + 0x6d2b79f5) | 0;
-		let value = Math.imul(state ^ (state >>> 15), 1 | state);
-		value ^= value + Math.imul(value ^ (value >>> 7), 61 | value);
-
-		return ((value ^ (value >>> 14)) >>> 0) / 0x100000000;
-	};
-}
-
-function hashSeed(seed: string): number {
-	let hash = 2166136261;
-
-	for (let index = 0; index < seed.length; index += 1) {
-		hash ^= seed.charCodeAt(index);
-		hash = Math.imul(hash, 16777619);
-	}
-
-	return hash >>> 0;
 }

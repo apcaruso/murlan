@@ -16,7 +16,6 @@ import {
 	getPlayersWithCards
 } from './state';
 import type { Card } from './cards';
-import type { ShuffleSeed } from './deck';
 import type { GameState, PlayerId, PlayerState } from './state';
 
 const FULL_DECK_SIZE = 54;
@@ -40,19 +39,14 @@ export class GameActionError extends Error {
 	}
 }
 
-export type StartHandOptions = {
-	seed?: ShuffleSeed;
-	deck?: readonly Card[];
-};
-
-export function startHand(state: GameState, options: StartHandOptions = {}): GameState {
+export function startHand(state: GameState): GameState {
 	const baseState = createGameState(state);
 	const players = getPlayersInSeatOrder(baseState).map((player) => ({
 		...player,
 		hand: [],
 		finishedPosition: null
 	}));
-	const deck = options.deck ? [...options.deck] : shuffleDeck(createDeck(), options.seed);
+	const deck = shuffleDeck(createDeck());
 	const dealtPlayers = dealCards(deck, players);
 	const firstPlayer = findPlayerWithThreeOfSpades(dealtPlayers) ?? dealtPlayers[0];
 
@@ -243,12 +237,12 @@ export function finishHandIfNeeded(state: GameState): GameState {
 	};
 }
 
-export function startNextHand(state: GameState, options: StartHandOptions = {}): GameState {
+export function startNextHand(state: GameState): GameState {
 	if (state.phase !== 'hand_finished') {
 		throw new GameActionError('invalid_phase');
 	}
 
-	return startHand(state, options);
+	return startHand(state);
 }
 
 function assertPlaying(state: GameState): void {

@@ -1,4 +1,3 @@
-import type { Card } from '../lib/game/cards';
 import type { Combination } from '../lib/game/rules';
 import type { GamePhase, GameState } from '../lib/game/state';
 import type { ClientCard } from './card-ids';
@@ -14,18 +13,12 @@ export type PlayerSession = {
 };
 
 export type StoredPlayer = PlayerSession & {
-	name: string;
-	seatIndex: number;
-	connected: boolean;
-	ready: boolean;
-	score: number;
 	joinedAt: string;
 };
 
 export type RoomEvent = {
 	id: number;
 	type: string;
-	payload: Record<string, unknown>;
 	createdAt: string;
 };
 
@@ -35,7 +28,6 @@ export type StoredRoom = {
 	inviteToken: string;
 	hostPlayerId: string;
 	maxPlayers: number;
-	phase: GamePhase;
 	players: StoredPlayer[];
 	gameState: GameState;
 	events: RoomEvent[];
@@ -102,11 +94,4 @@ export type JoinRoomResponse = {
 	code: string;
 	session: PlayerSession;
 	snapshot: RoomSnapshot;
-};
-
-export type PlayedCardsPayload = {
-	playerId: string;
-	cardIds: string[];
-	cards: Card[];
-	nextPlayerId: string | null;
 };

@@ -1,5 +1,5 @@
 import { RoomDurableObject } from './room';
-import { ApiError, corsHeaders, errorResponse, getOptionalInteger, getString, json, parseJsonBody } from './http';
+import { ApiError, errorResponse, getOptionalInteger, getString, json, parseJsonBody } from './http';
 import { generateRoomCode } from './random';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../lib/game/deck';
 import type { WorkerEnv } from './types';
@@ -8,10 +8,6 @@ export { RoomDurableObject };
 
 export default {
 	async fetch(req: Request, env: WorkerEnv): Promise<Response> {
-		if (req.method === 'OPTIONS') {
-			return new Response(null, { headers: corsHeaders });
-		}
-
 		try {
 			const url = new URL(req.url);
 
