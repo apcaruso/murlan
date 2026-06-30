@@ -63,7 +63,6 @@
 		font-size: clamp(1.1rem, 2.4vw, 1.55rem);
 		font-weight: 900;
 		letter-spacing: -0.04em;
-		text-transform: uppercase;
 	}
 
 	.selected {
@@ -84,14 +83,14 @@
 		min-height: 2.9rem;
 		min-width: 7.2rem;
 		place-items: center;
-		border: 1px solid var(--white);
+		border: 0;
 		border-radius: 999px;
 		padding: 0.85rem 1rem;
 		background: var(--white);
 		color: var(--black);
 		font: inherit;
 		font-weight: 900;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.05em;
 		text-align: center;
 		text-transform: uppercase;
 		cursor: pointer;
@@ -109,13 +108,12 @@
 	}
 
 	button.secondary {
-		background: var(--black);
+		background: var(--black-3);
 		color: var(--white);
 	}
 
 	button.ghost {
-		border-color: var(--line);
-		background: transparent;
+		background: var(--wash);
 		color: var(--white);
 	}
 
@@ -131,7 +129,6 @@
 
 	.error {
 		flex-basis: 100%;
-		border: 1px solid var(--line-strong);
 		border-radius: var(--radius-sm);
 		padding: 0.65rem 0.8rem;
 		background: var(--wash);
@@ -172,9 +169,9 @@
 
 		button {
 			min-width: 0;
-			min-height: 2.75rem;
-			padding: 0.7rem 0.75rem;
-			font-size: 0.82rem;
+			min-height: 3rem;
+			padding: 0.78rem 0.8rem;
+			font-size: 0.86rem;
 		}
 
 		button.ghost,

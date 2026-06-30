@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PublicRoomState } from '../../worker/types';
-	import { getCardShortLabel } from '../game/cards';
+	import { getCardDetailLabel, getCardFaceLabel } from '../game/cards';
 	import CardIcon from './CardIcon.svelte';
 	import PlayerPanel from './PlayerPanel.svelte';
 
@@ -57,8 +57,9 @@
 			<div class="played-cards">
 				{#each state.lastPlay.cards as card}
 					<span class="played-card">
-						<CardIcon {card} compact />
-						<span class="played-label">{getCardShortLabel(card)}</span>
+						<span class="played-rank">{getCardFaceLabel(card)}</span>
+						<CardIcon {card} />
+						<span class="played-label">{getCardDetailLabel(card)}</span>
 					</span>
 				{/each}
 			</div>
@@ -122,7 +123,6 @@
 		display: inline-grid;
 		min-height: 2rem;
 		place-items: center;
-		border: 1px solid var(--line);
 		border-radius: 999px;
 		padding: 0.35rem 0.7rem;
 		background: var(--wash);
@@ -138,8 +138,7 @@
 		display: grid;
 		place-items: center;
 		gap: 0.75rem;
-		border: 1px solid var(--line-strong);
-		border-radius: 1.6rem;
+		border-radius: 1.35rem;
 		padding: 1rem;
 		background: var(--wash);
 		text-align: center;
@@ -159,24 +158,37 @@
 	}
 
 	.played-card {
-		display: inline-flex;
+		display: grid;
+		grid-template-rows: auto 1fr auto;
+		width: clamp(3.65rem, 7vw, 4.8rem);
+		aspect-ratio: 5 / 7;
 		align-items: center;
-		justify-content: center;
-		gap: 0.35rem;
-		min-width: 3.2rem;
-		min-height: 2.4rem;
-		border: 1px solid var(--white);
-		border-radius: 0.65rem;
-		padding: 0.5rem 0.65rem;
+		justify-items: center;
+		gap: 0.18rem;
+		border-radius: 0.82rem;
+		padding: 0.45rem 0.35rem;
 		background: var(--white);
 		color: var(--black);
 		font-weight: 900;
 		text-align: center;
 		text-transform: uppercase;
+		box-shadow: 0 0.55rem 1.3rem rgba(0, 0, 0, 0.28);
+	}
+
+	.played-rank {
+		font-size: clamp(1.05rem, 2vw, 1.35rem);
+		letter-spacing: -0.04em;
+		line-height: 1;
 	}
 
 	.played-label {
+		max-width: 100%;
+		overflow: hidden;
+		font-size: 0.55rem;
 		line-height: 1;
+		opacity: 0.62;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	small,
@@ -199,8 +211,7 @@
 		display: grid;
 		place-items: center;
 		min-height: 3rem;
-		border: 1px solid var(--line);
-		border-radius: 0.9rem;
+		border-radius: 0.85rem;
 		padding: 0.65rem;
 		background: var(--wash);
 		text-align: center;
@@ -259,10 +270,10 @@
 		}
 
 		.center-play {
-			min-height: clamp(8.8rem, 26dvh, 10.5rem);
-			border-radius: 1.15rem;
-			padding: 0.75rem;
-			gap: 0.55rem;
+			min-height: clamp(8.2rem, 24dvh, 10rem);
+			border-radius: 0.95rem;
+			padding: 0.7rem;
+			gap: 0.5rem;
 		}
 
 		.played-cards {
@@ -270,10 +281,17 @@
 		}
 
 		.played-card {
-			min-width: 2.65rem;
-			min-height: 2.1rem;
-			padding: 0.4rem 0.5rem;
-			font-size: 0.82rem;
+			width: 3.15rem;
+			padding: 0.36rem 0.28rem;
+			border-radius: 0.72rem;
+		}
+
+		.played-rank {
+			font-size: 1.05rem;
+		}
+
+		.played-label {
+			font-size: 0.48rem;
 		}
 
 		.players-grid {

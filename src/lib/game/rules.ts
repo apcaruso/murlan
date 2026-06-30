@@ -92,7 +92,7 @@ export function isStraight(cards: readonly Card[]): boolean {
 		return false;
 	}
 
-	const values = sortCards(cards).map(getCardValue);
+	const values = cards.map(getStraightValue).sort((left, right) => left - right);
 
 	return values.every((value, index) => index === 0 || value === values[index - 1] + 1);
 }
@@ -109,13 +109,23 @@ function hasSameValue(cards: readonly Card[], expectedLength: number): boolean {
 }
 
 function createCombination(type: CombinationType, cards: readonly Card[]): Combination {
-	const sortedCards = sortCards(cards);
+	const sortedCards = type === 'straight' ? sortStraightCards(cards) : sortCards(cards);
 	const highestCard = sortedCards[sortedCards.length - 1];
 
 	return {
 		type,
 		cards: sortedCards,
 		length: sortedCards.length,
-		value: getCardValue(highestCard)
+		value: type === 'straight' ? getStraightValue(highestCard) : getCardValue(highestCard)
 	};
+}
+
+function sortStraightCards<T extends Card>(cards: readonly T[]): T[] {
+	return [...cards].sort((left, right) => getStraightValue(left) - getStraightValue(right));
+}
+
+function getStraightValue(card: Card): number {
+	if (card.rank === 'A') return 1;
+	if (card.rank === '2') return 2;
+	return getCardValue(card);
 }

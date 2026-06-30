@@ -515,20 +515,14 @@
 		min-height: 100dvh;
 		padding: clamp(0.9rem, 2.4vw, 1.4rem);
 		background:
-			linear-gradient(120deg, transparent 0 49%, rgba(247, 247, 242, 0.08) 49% 50%, transparent 50% 100%),
-			radial-gradient(circle at 88% 10%, rgba(247, 247, 242, 0.12), transparent 20rem),
-			linear-gradient(145deg, #050505 0%, #111111 100%);
+			radial-gradient(circle at 86% 6%, rgba(250, 247, 237, 0.1), transparent 18rem),
+			var(--black);
 		overflow-x: hidden;
 	}
 
 	.game-shell {
 		min-height: 100dvh;
-		background:
-			linear-gradient(90deg, rgba(247, 247, 242, 0.06) 1px, transparent 1px),
-			linear-gradient(180deg, rgba(247, 247, 242, 0.05) 1px, transparent 1px),
-			radial-gradient(circle at 50% 14%, rgba(247, 247, 242, 0.12), transparent 20rem),
-			#050505;
-		background-size: 4rem 4rem, 4rem 4rem, auto, auto;
+		background: var(--black);
 	}
 
 	.topbar {
@@ -549,12 +543,11 @@
 	}
 
 	.panel {
-		border: 1px solid var(--line);
-		border-radius: 1.4rem;
+		border: 0;
+		border-radius: 1.25rem;
 		padding: clamp(1rem, 2vw, 1.15rem);
-		background: rgba(5, 5, 5, 0.78);
+		background: rgba(23, 22, 17, 0.86);
 		box-shadow: var(--shadow);
-		backdrop-filter: blur(16px);
 	}
 
 	.loading-panel,
@@ -682,14 +675,13 @@
 
 	.hud-block {
 		display: grid;
-		min-height: 4.1rem;
+		min-height: 3.8rem;
 		place-items: center;
-		border: 1px solid var(--line);
-		border-radius: 1.15rem;
-		padding: 0.65rem 0.8rem;
-		background: rgba(5, 5, 5, 0.78);
+		border: 0;
+		border-radius: 1.05rem;
+		padding: 0.6rem 0.8rem;
+		background: var(--wash);
 		text-align: center;
-		box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.28);
 	}
 
 	.hud-block span {
@@ -712,7 +704,6 @@
 	}
 
 	.turn-block.active {
-		border-color: var(--white);
 		background: var(--white);
 		color: var(--black);
 		animation: turn-pulse 1100ms ease-in-out infinite alternate;
@@ -725,10 +716,9 @@
 
 	.arena-card,
 	.play-dock {
-		border: 1px solid var(--line);
-		background: rgba(5, 5, 5, 0.82);
+		border: 0;
+		background: rgba(23, 22, 17, 0.9);
 		box-shadow: var(--shadow);
-		backdrop-filter: blur(18px);
 	}
 
 	.arena-card {
@@ -767,10 +757,9 @@
 	}
 
 	.game-screen.your-turn .play-dock {
-		border-color: var(--white);
 		box-shadow:
-			0 0 0 1px rgba(247, 247, 242, 0.28),
-			0 1.5rem 4rem rgba(0, 0, 0, 0.62);
+			0 0 0 1px rgba(250, 247, 237, 0.22),
+			0 1.2rem 3rem rgba(0, 0, 0, 0.54);
 	}
 
 	@keyframes turn-pulse {
@@ -822,13 +811,13 @@
 			min-height: 100dvh;
 			grid-template-columns: 1fr;
 			grid-template-rows: auto minmax(0, 1fr) auto auto;
-			gap: 0.55rem;
-			padding: max(0.45rem, env(safe-area-inset-top)) 0.45rem max(0.45rem, env(safe-area-inset-bottom));
+			gap: 0.5rem;
+			padding: max(0.5rem, env(safe-area-inset-top)) 0.5rem max(0.5rem, env(safe-area-inset-bottom));
 		}
 
 		.game-hud {
-			grid-template-columns: 1fr;
-			gap: 0.45rem;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.4rem;
 			order: 1;
 		}
 
@@ -836,13 +825,9 @@
 			display: none;
 		}
 
-		.game-hud > .turn-block {
-			grid-column: 1 / -1;
-		}
-
 		.hud-block {
-			min-height: 2.75rem;
-			border-radius: 0.9rem;
+			min-height: 2.7rem;
+			border-radius: 0.85rem;
 			padding: 0.45rem 0.55rem;
 		}
 
@@ -860,8 +845,8 @@
 			min-height: 0;
 			overflow: auto;
 			overscroll-behavior: contain;
-			border-radius: 1.15rem;
-			padding: 0.55rem;
+			border-radius: 1rem;
+			padding: 0.5rem;
 		}
 
 		.game-rail {
@@ -870,10 +855,10 @@
 
 		.play-dock {
 			order: 3;
-			gap: 0.55rem;
-			border-radius: 1rem;
-			padding: 0.6rem;
-			bottom: max(0.45rem, env(safe-area-inset-bottom));
+			gap: 0.6rem;
+			border-radius: 1.05rem;
+			padding: 0.65rem 0.6rem;
+			bottom: max(0.5rem, env(safe-area-inset-bottom));
 		}
 
 		.mobile-game-info {
@@ -885,13 +870,13 @@
 			display: grid;
 			min-height: 2.65rem;
 			place-items: center;
-			border: 1px solid var(--line);
+			border: 0;
 			border-radius: 999px;
 			padding: 0.65rem 0.9rem;
-			background: rgba(5, 5, 5, 0.78);
+			background: var(--wash);
 			color: var(--white);
 			font-weight: 900;
-			letter-spacing: 0.08em;
+			letter-spacing: 0.04em;
 			text-align: center;
 			text-transform: uppercase;
 			list-style: none;

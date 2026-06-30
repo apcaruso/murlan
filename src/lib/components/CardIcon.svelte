@@ -35,8 +35,8 @@
 
 	@media (max-width: 760px) {
 		.card-icon {
-			width: 2rem;
-			font-size: 2rem;
+			width: 2.2rem;
+			font-size: 2.2rem;
 		}
 
 		.card-icon.compact {

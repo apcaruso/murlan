@@ -41,14 +41,14 @@
 		display: grid;
 		grid-template-rows: 1fr auto;
 		place-items: center;
-		min-width: clamp(4.35rem, 8vw, 5.35rem);
-		min-height: clamp(6.1rem, 11vw, 7.45rem);
-		border: 1px solid var(--white);
+		min-width: clamp(4.65rem, 8.8vw, 5.7rem);
+		min-height: clamp(6.55rem, 12.2vw, 7.95rem);
+		border: 0;
 		border-radius: 1rem;
-		padding: 0.65rem;
+		padding: 0.7rem;
 		background: var(--white);
 		color: var(--black);
-		box-shadow: 0 0.8rem 1.8rem rgba(0, 0, 0, 0.34);
+		box-shadow: 0 0.7rem 1.6rem rgba(0, 0, 0, 0.3);
 		cursor: pointer;
 		font: inherit;
 		text-align: center;
@@ -71,14 +71,14 @@
 		background: var(--black);
 		color: var(--white);
 		box-shadow:
-			0 0 0 2px var(--white),
-			0 1.2rem 2.2rem rgba(0, 0, 0, 0.58);
+			inset 0 0 0 2px var(--white),
+			0 1.1rem 2rem rgba(0, 0, 0, 0.54);
 	}
 
 	.card.highlighted:not(.selected) {
 		box-shadow:
-			0 0 0 2px var(--white),
-			0 0.8rem 1.8rem rgba(0, 0, 0, 0.34);
+			inset 0 0 0 2px rgba(17, 16, 13, 0.35),
+			0 0.7rem 1.6rem rgba(0, 0, 0, 0.3);
 	}
 
 	.card:disabled {
@@ -127,7 +127,6 @@
 		display: grid;
 		min-height: 1.25rem;
 		place-items: center;
-		border: 1px solid var(--white);
 		border-radius: 999px;
 		padding: 0.18rem 0.45rem;
 		background: var(--black);
@@ -142,10 +141,10 @@
 
 	@media (max-width: 760px) {
 		.card {
-			min-width: 3.7rem;
-			min-height: 5.25rem;
-			border-radius: 0.78rem;
-			padding: 0.45rem;
+			min-width: 4.55rem;
+			min-height: 6.45rem;
+			border-radius: 0.9rem;
+			padding: 0.55rem;
 		}
 
 		.card:hover:not(:disabled),
@@ -158,11 +157,11 @@
 		}
 
 		.rank {
-			font-size: 1.28rem;
+			font-size: 1.48rem;
 		}
 
 		.id {
-			font-size: 0.52rem;
+			font-size: 0.58rem;
 		}
 
 		.flag {

@@ -116,15 +116,15 @@
 
 		.cards {
 			gap: 0;
-			margin-inline: -0.45rem;
+			margin-inline: -0.6rem;
 			overflow-y: visible;
 			overscroll-behavior-inline: contain;
-			padding: 0.65rem 0.45rem 0.85rem;
+			padding: 0.75rem 0.6rem 1rem;
 			scroll-snap-type: x mandatory;
 		}
 
 		.cards :global(.card) {
-			margin-right: -1.05rem;
+			margin-right: -1.15rem;
 			scroll-snap-align: start;
 		}
 

@@ -14,19 +14,19 @@
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 
-	--black: #050505;
-	--black-2: #0a0a0a;
-	--black-3: #111111;
-	--white: #f7f7f2;
-	--white-2: #deded8;
-	--line: rgba(247, 247, 242, 0.18);
-	--line-strong: rgba(247, 247, 242, 0.42);
-	--wash: rgba(247, 247, 242, 0.06);
-	--wash-strong: rgba(247, 247, 242, 0.12);
-	--shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.52);
-	--radius-lg: 1.5rem;
-	--radius-md: 1rem;
-	--radius-sm: 0.7rem;
+	--black: #11100d;
+	--black-2: #171611;
+	--black-3: #222018;
+	--white: #faf7ed;
+	--white-2: #d7d0bf;
+	--line: rgba(250, 247, 237, 0.1);
+	--line-strong: rgba(250, 247, 237, 0.2);
+	--wash: rgba(250, 247, 237, 0.055);
+	--wash-strong: rgba(250, 247, 237, 0.1);
+	--shadow: 0 1rem 2.8rem rgba(0, 0, 0, 0.38);
+	--radius-lg: 1.35rem;
+	--radius-md: 0.95rem;
+	--radius-sm: 0.65rem;
 }
 
 * {

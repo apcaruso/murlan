@@ -27,16 +27,14 @@
 	.player-panel {
 		display: grid;
 		gap: 0.7rem;
-		border: 1px solid var(--line);
-		border-radius: 1rem;
+		border-radius: 0.95rem;
 		padding: 0.85rem;
 		background: var(--wash);
 		text-align: center;
 	}
 
 	.player-panel.current {
-		border-color: var(--white);
-		box-shadow: 0 0 0 2px rgba(247, 247, 242, 0.16);
+		box-shadow: inset 0 0 0 2px rgba(250, 247, 237, 0.28);
 	}
 
 	.player-panel.self {
@@ -68,10 +66,9 @@
 		display: inline-grid;
 		min-height: 1.65rem;
 		place-items: center;
-		border: 1px solid var(--line);
 		border-radius: 999px;
 		padding: 0.3rem 0.55rem;
-		background: transparent;
+		background: rgba(250, 247, 237, 0.07);
 		color: var(--white-2);
 		font-size: 0.68rem;
 		font-weight: 900;
@@ -81,7 +78,6 @@
 
 	.badges .turn,
 	.badges .control {
-		border-color: var(--white);
 		background: var(--white);
 		color: var(--black);
 	}
